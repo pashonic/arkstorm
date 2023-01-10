@@ -1,2 +1,2 @@
 # arkstorm
-Youtube auto creation and upload application
+Youtube auto creation and upload tool.
