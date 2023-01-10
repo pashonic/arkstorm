@@ -42,22 +42,20 @@ Note: See [youtube-token-generator README.md](youtube-token-generator/README.md)
 
 # Building and Running
 ## Building
-
 ```
 # build local binary executable
 $make build
 
-# build docker image
+# build docker image (only requires docker)
 $make docker
 ```
-## Running
 
+## Running
 ```
 make run config=[toml config file path]
 ```
 
 # Additional Info
-
 ## Important Notes
 
 - Originally developed on Linux Mint 21.1
