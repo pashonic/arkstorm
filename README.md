@@ -1,10 +1,10 @@
 # Arkstorm
-Youtube auto creation and upload tool.
+Youtube video auto creation and upload tool.
 
 # Summary
 
-- BUGBUG: Write purpose of application
-- BUGBUG: Write usecase
+- BUGBUG: Write purpose of app
+- BUGBUG: Write usecase of app
 
 # Dependencies
 
@@ -12,10 +12,12 @@ Youtube auto creation and upload tool.
 
 - Golang 1.19
 - Build Essentials (Linux)
+- docker (for building container)
 
 ## Runtime Environment
 
 - [ffmpeg installed and in path](https://ffmpeg.org/download.html)
+- docker (for running container locally)
 
 ## Runtime Parameters
 
@@ -38,9 +40,29 @@ Note: WEATHERBELL_SESSIONID is for development. It stops app from requesting new
 
 Note: See [youtube-token-generator README.md](youtube-token-generator/README.md) for instructions on how to create these files.
 
+# Building and Running
+
+## Building
+
+```
+# build local binary executable
+$make build
+
+# build docker image
+$make docker
+```
+
+###
+
 # Known Issues and Limitations
 
-- None, the app is perfect
+## Limitations
+
+- Originally developed on Linux Mint 21.1
+
+## Known Issues 
+
+- None!, it's perfect
 
 
 
