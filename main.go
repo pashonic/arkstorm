@@ -31,11 +31,11 @@ func main() {
 	}
 
 	// Download weatherbell assets
-	views := conf.Providers.Weatherbell.Download(default_assets_dir)
+	views := weatherbell.Download(&conf.Providers.Weatherbell, default_assets_dir)
 
 	// Make videos from created views
 	videoContent := videobuilder.CreateVideos(views, conf.Videos, default_output_videos_dir)
 
 	// Upload video
-	videouploader.UploadVideos(conf.Youtube, videoContent)
+	videouploader.UploadVideos(&conf.Youtube, videoContent)
 }

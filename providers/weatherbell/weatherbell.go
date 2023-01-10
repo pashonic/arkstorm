@@ -49,7 +49,7 @@ type WeatherBellView struct {
 	Cyclehours []int
 }
 
-func (weatherBell *Weatherbell) Download(targetDir string) map[string]string {
+func Download(weatherbell *Weatherbell, targetDir string) map[string]string {
 	views := make(map[string]string)
 
 	// Get session ID
@@ -62,7 +62,7 @@ func (weatherBell *Weatherbell) Download(targetDir string) map[string]string {
 	}
 
 	// Process views
-	for viewName, view := range weatherBell.Views {
+	for viewName, view := range weatherbell.Views {
 
 		// Get cycle list from site
 		cycleList := view.getCycleList(sessionId)

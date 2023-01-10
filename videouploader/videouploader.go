@@ -42,7 +42,7 @@ func getTokenFromFile(tokenFilePath string) *oauth2.Token {
 	return token
 }
 
-func UploadVideos(videos Videos, videoContent map[string]string) {
+func UploadVideos(videos *Videos, videoContent map[string]string) {
 	for videoId, video := range videos.Videos {
 		Upload(videoContent[videoId], &video)
 	}
