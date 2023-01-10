@@ -32,13 +32,13 @@ func CreateVideos(views map[string]string, videos map[string]Video, outputDir st
 	videoContent := make(map[string]string)
 	for videoId, video := range videos {
 		outputFilePath := path.Join(outputDir, video.Filename+".mp4")
-		video.Create(views, outputFilePath)
+		create(&video, views, outputFilePath)
 		videoContent[videoId] = outputFilePath
 	}
 	return videoContent
 }
 
-func (video *Video) Create(viewContent map[string]string, outputFilePath string) {
+func create(video *Video, viewContent map[string]string, outputFilePath string) {
 
 	// Add views to input stream
 	var streamInputs []*ffmpeg.Stream

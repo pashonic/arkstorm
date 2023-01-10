@@ -16,9 +16,11 @@ const (
 )
 
 type config struct {
-	Providers weatherbell.Sources
-	Videos    map[string]videobuilder.Video
-	Youtube   videouploader.Videos
+	Providers struct {
+		Weatherbell weatherbell.Weatherbell
+	}
+	Videos  map[string]videobuilder.Video
+	Youtube videouploader.Videos
 }
 
 func main() {
@@ -36,6 +38,6 @@ func main() {
 	// Make videos from created views
 	videoContent := videobuilder.CreateVideos(views, conf.Videos, default_output_videos_dir)
 
-	// Upload video
+	// Upload videos
 	videouploader.UploadVideos(&conf.Youtube, videoContent)
 }

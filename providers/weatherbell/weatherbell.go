@@ -33,10 +33,6 @@ const (
 	default_font_file = "fonts/Yagora.ttf"
 )
 
-type Sources struct {
-	Weatherbell Weatherbell
-}
-
 type Weatherbell struct {
 	Views map[string]WeatherBellView
 }
