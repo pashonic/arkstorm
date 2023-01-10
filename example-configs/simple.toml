@@ -1,0 +1,36 @@
+[providers]
+
+[providers.weatherbell.views.wa2mtemp]
+viewtype="model"
+product="ecmwf-deterministic"
+region="washington"
+parameter="t2m_f"
+cyclehours=[0,12]
+
+[providers.weatherbell.views.wagusts]
+viewtype="model"
+product="ecmwf-deterministic"
+region="washington"
+parameter="gust_mph"
+cyclehours=[0,12]
+
+[videos]
+
+[videos.watempwind]
+filename = "Washington-Temp-Wind"
+imagesPerSecond = "2"
+
+[videos.watempwind.views.wa2mtemp]
+title = "2M Temprature"
+speed = "1"
+
+[videos.watempwind.views.wagusts]
+title = "10M Wind Gust"
+speed = "1"
+
+[youtube.videos.watempwind]
+title = "Washington ECMWF"
+description = "EURO run"
+privacy = "unlisted"
+tags = ["washington", "weather"]
+categoryid = "28"
