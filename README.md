@@ -7,7 +7,6 @@ Youtube video auto creation and upload tool.
 - BUGBUG: Write usecase of app
 
 # Dependencies
-
 ## Build Environment
 
 - Golang 1.19
@@ -20,7 +19,6 @@ Youtube video auto creation and upload tool.
 - docker (for running container locally)
 
 ## Runtime Parameters
-
 ### App Configuration
 - Toml Config file: ./arkstorm [config file path]. 
 
@@ -41,7 +39,6 @@ Note: WEATHERBELL_SESSIONID is for development. It stops app from requesting new
 Note: See [youtube-token-generator README.md](youtube-token-generator/README.md) for instructions on how to create these files.
 
 # Building and Running
-
 ## Building
 
 ```
@@ -51,11 +48,13 @@ $make build
 # build docker image
 $make docker
 ```
+## Running
 
-###
+```
+make run config=[toml config file path]
+```
 
 # Known Issues and Limitations
-
 ## Limitations
 
 - Originally developed on Linux Mint 21.1
@@ -63,7 +62,3 @@ $make docker
 ## Known Issues 
 
 - None!, it's perfect
-
-
-
-
