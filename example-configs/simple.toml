@@ -5,6 +5,7 @@ viewtype="model"
 product="ecmwf-deterministic"
 region="washington"
 parameter="t2m_f"
+label_timezone="America/Los_Angeles"
 cyclehours=[0,12]
 
 [providers.weatherbell.views.wagusts]
@@ -12,6 +13,7 @@ viewtype="model"
 product="ecmwf-deterministic"
 region="washington"
 parameter="gust_mph"
+label_timezone="America/New_York"
 cyclehours=[0,12]
 
 [videos]
@@ -28,9 +30,9 @@ speed = "1"
 title = "10M Wind Gust"
 speed = "1"
 
-[youtube.videos.watempwind]
-title = "Washington ECMWF"
-description = "EURO run"
-privacy = "unlisted"
-tags = ["washington", "weather"]
-categoryid = "28"
+# [youtube.videos.watempwind]
+# title = "Washington ECMWF"
+# description = "EURO run"
+# privacy = "unlisted"
+# tags = ["washington", "weather"]
+# categoryid = "28"

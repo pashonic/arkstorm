@@ -38,11 +38,12 @@ type Weatherbell struct {
 }
 
 type WeatherBellView struct {
-	Viewtype   string
-	Product    string
-	Region     string
-	Parameter  string
-	Cyclehours []int
+	Viewtype       string
+	Product        string
+	Region         string
+	Parameter      string
+	Label_timezone string
+	Cyclehours     []int
 }
 
 func Download(weatherbell *Weatherbell, targetDir string) map[string]string {
@@ -68,7 +69,7 @@ func Download(weatherbell *Weatherbell, targetDir string) map[string]string {
 
 		// Download Images
 		targetDir := path.Join(targetDir, viewName)
-		downloadImageSet(imageUrlList, targetDir)
+		downloadImageSet(imageUrlList, view.Label_timezone, targetDir)
 		views[viewName] = targetDir
 	}
 	return views
@@ -92,17 +93,17 @@ func getSessionId() string {
 	client := &http.Client{}
 	res, err := client.Do(req)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalln(err)
 	}
 
 	// Process request
 	regex, err := regexp.Compile(`PHPSESSID=(\w+)`)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalln(err)
 	}
 	setCookies := res.Header.Values("Set-Cookie")
 	if len(setCookies) < 2 {
-		log.Fatal("Unable get to session ID, likely invalid credentials")
+		log.Fatalln("Unable get to session ID, likely invalid credentials")
 	}
 	match := regex.FindStringSubmatch(setCookies[0])
 	if match == nil {
@@ -113,20 +114,20 @@ func getSessionId() string {
 	return match[1]
 }
 
-func downloadImageSet(imageUrlList []string, targetDir string) {
+func downloadImageSet(imageUrlList []string, timeZone string, targetDir string) {
 	for index, imageUrl := range imageUrlList {
 
 		// Create and verify directory path
 		err := os.MkdirAll(targetDir, os.ModePerm)
 		if err != nil {
-			log.Fatal(err)
+			log.Fatalln(err)
 		}
 
 		// Send request
 		client := http.Client{}
 		res, err := client.Get(imageUrl)
 		if err != nil {
-			log.Fatal(err)
+			log.Fatalln(err)
 		}
 
 		// Read image from body.
@@ -147,6 +148,11 @@ func downloadImageSet(imageUrlList []string, targetDir string) {
 			log.Fatalln(err)
 		}
 		viewTime := time.Unix(intVar, 0)
+		location, err := time.LoadLocation(timeZone)
+		if err != nil {
+			log.Fatalln(err)
+		}
+		viewTime = viewTime.In(location)
 		dateTimeString := viewTime.Format("Mon, 2 Jan 15:04 PM MST")
 
 		// Draw date/time label to image
