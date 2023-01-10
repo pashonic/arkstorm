@@ -9,9 +9,11 @@ Youtube video auto creation and upload tool.
 # Dependencies
 ## Build Environment
 
-- Golang 1.19
-- Build Essentials (Linux)
-- docker (for building container)
+- Binary
+  - Golang 1.19
+  - Build Essentials (Linux)
+- Docker
+  - docker
 
 ## Runtime Environment
 
@@ -54,10 +56,15 @@ $make docker
 make run config=[toml config file path]
 ```
 
-# Known Issues and Limitations
-## Limitations
+# Additional Info
+
+## Important Notes
 
 - Originally developed on Linux Mint 21.1
+
+## Limitations
+
+- None!, it's a beast
 
 ## Known Issues 
 
