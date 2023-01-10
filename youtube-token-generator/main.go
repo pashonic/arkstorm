@@ -16,7 +16,7 @@ import (
 
 func main() {
 
-	// Check arguments.
+	// Check for client secret file path
 	if len(os.Args) != 2 {
 		fmt.Println("app [client secret file path]")
 		os.Exit(0)

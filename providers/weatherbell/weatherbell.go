@@ -24,13 +24,13 @@ import (
 )
 
 const (
-	login_url         = "https://www.weatherbell.com/login-captcha"
-	api_image_url     = "https://maps.api.weatherbell.com/image/"
-	image_stroage_url = "https://images.weatherbell.com"
-	env_username_name = "WEATHERBELL_USERNAME"
-	env_password_name = "WEATHERBELL_PASSWORD"
-	static_session_id = "2beda7e00a8b92634128fcdc928a994e"
-	default_font_file = "fonts/Yagora.ttf"
+	login_url          = "https://www.weatherbell.com/login-captcha"
+	api_image_url      = "https://maps.api.weatherbell.com/image/"
+	image_stroage_url  = "https://images.weatherbell.com"
+	env_username_name  = "WEATHERBELL_USERNAME"
+	env_password_name  = "WEATHERBELL_PASSWORD"
+	env_sessionid_name = "WEATHERBELL_SESSIONID"
+	default_font_file  = "fonts/Yagora.ttf"
 )
 
 type Weatherbell struct {
@@ -49,11 +49,8 @@ func Download(weatherbell *Weatherbell, targetDir string) map[string]string {
 	views := make(map[string]string)
 
 	// Get session ID
-	sessionId := ""
-	if static_session_id != "" {
-		sessionId = static_session_id
-	} else {
-
+	sessionId := os.Getenv(env_sessionid_name)
+	if sessionId == "" {
 		sessionId = getSessionId()
 	}
 
@@ -167,7 +164,6 @@ func downloadImageSet(imageUrlList []string, targetDir string) {
 			log.Fatalln(err)
 		}
 		out.Close()
-
 	}
 }
 func addLabel(img *image.RGBA, x, y int, label string) {

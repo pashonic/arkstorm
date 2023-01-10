@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"os"
 
 	"github.com/BurntSushi/toml"
 	"github.com/pashonic/arkstorm/providers/weatherbell"
@@ -12,7 +13,7 @@ import (
 const (
 	default_assets_dir        = "assets"
 	default_output_videos_dir = "videos"
-	default_config_file       = "example-configs/simple.toml"
+	default_config_file       = "config.toml"
 )
 
 type config struct {
@@ -25,9 +26,17 @@ type config struct {
 
 func main() {
 
+	// Check for client secret file path
+	var configFile string
+	if len(os.Args) == 2 {
+		configFile = os.Args[1]
+	} else {
+		configFile = default_config_file
+	}
+
 	// Load configuration
 	var conf config
-	_, err := toml.DecodeFile(default_config_file, &conf)
+	_, err := toml.DecodeFile(configFile, &conf)
 	if err != nil {
 		log.Fatal(err)
 	}
