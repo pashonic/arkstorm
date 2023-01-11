@@ -50,7 +50,7 @@ func main() {
 	}
 
 	// Save token file
-	tokenCacheFilePath := path.Join(filepath.Dir(clientSecretFilePath), "client_token.json")
+	tokenCacheFilePath := filepath.Join(filepath.Dir(clientSecretFilePath), "client_token.json")
 	fmt.Printf("Saving credential file to: %s\n", tokenCacheFilePath)
 	file, err := os.OpenFile(tokenCacheFilePath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {

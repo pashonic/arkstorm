@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"path"
+	"path/filepath"
 
 	ffmpeg "github.com/u2takey/ffmpeg-go"
 )
@@ -31,7 +31,7 @@ func CreateVideos(views map[string]string, videos map[string]Video, outputDir st
 	// Process videos
 	videoContent := make(map[string]string)
 	for videoId, video := range videos {
-		outputFilePath := path.Join(outputDir, video.Filename+".mp4")
+		outputFilePath := filepath.Join(outputDir, video.Filename+".mp4")
 		create(&video, views, outputFilePath)
 		videoContent[videoId] = outputFilePath
 	}
@@ -43,7 +43,7 @@ func create(video *Video, viewContent map[string]string, outputFilePath string) 
 	// Add views to input stream
 	var streamInputs []*ffmpeg.Stream
 	for viewName, view := range video.Views {
-		sourcePath := path.Join(viewContent[viewName], "*.png")
+		sourcePath := filepath.Join(viewContent[viewName], "*.png")
 		streamInput := ffmpeg.Input(sourcePath, ffmpeg.KwArgs{"r": video.ImagesPerSecond, "pattern_type": "glob"}).Filter("setpts", ffmpeg.Args{fmt.Sprintf("%v*PTS", view.Speed)})
 		streamInputs = append(streamInputs, streamInput)
 	}

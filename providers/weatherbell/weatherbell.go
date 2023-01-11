@@ -12,7 +12,7 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"path"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -68,7 +68,7 @@ func Download(weatherbell *Weatherbell, targetDir string) map[string]string {
 		imageUrlList := view.getImageUrlList(sessionId, selectedCycleTime)
 
 		// Download Images
-		targetDir := path.Join(targetDir, viewName)
+		targetDir := filepath.Join(targetDir, viewName)
 		downloadImageSet(imageUrlList, view.Label_timezone, targetDir)
 		views[viewName] = targetDir
 	}
@@ -162,7 +162,7 @@ func downloadImageSet(imageUrlList []string, timeZone string, targetDir string) 
 		addLabel(imgRGBA, 420, 25, dateTimeString) // Future version: make this configurable
 
 		// Write final image to file
-		localTargetPath := path.Join(targetDir, fmt.Sprintf("%03d.png", index))
+		localTargetPath := filepath.Join(targetDir, fmt.Sprintf("%03d.png", index))
 		fmt.Println("Saving File: ", localTargetPath)
 		out, _ := os.Create(localTargetPath)
 		err = png.Encode(out, imgRGBA)
