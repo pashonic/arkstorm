@@ -1,4 +1,5 @@
 FROM golang:1.19.4-alpine AS builder
+RUN apk add --update make
 WORKDIR /go/arkstorm
 COPY . ./
 RUN unset GOPATH
