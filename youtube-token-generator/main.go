@@ -6,7 +6,6 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
-	"path"
 	"path/filepath"
 
 	"golang.org/x/oauth2"
