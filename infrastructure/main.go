@@ -1,9 +1,12 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/pulumi/pulumi-aws/sdk/v5/go/aws/ec2"
+	"github.com/pulumi/pulumi-aws/sdk/v5/go/aws/ecr"
+	"github.com/pulumi/pulumi-aws/sdk/v5/go/aws/iam"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
 )
 
@@ -119,6 +122,85 @@ func main() {
 			RouteTableId: routePrivate.ID(),
 		})
 
+		repo, err := ecr.NewRepository(ctx, "arkstormrepo", &ecr.RepositoryArgs{
+			ImageScanningConfiguration: &ecr.RepositoryImageScanningConfigurationArgs{
+				ScanOnPush: pulumi.Bool(false),
+			},
+			ImageTagMutability: pulumi.String("MUTABLE"),
+			Name:               pulumi.String("arkstormrepo"),
+		})
+
+		ecsAssumeRole, err := json.Marshal(map[string]interface{}{
+			"Version": "2012-10-17",
+			"Statement": []interface{}{
+				map[string]interface{}{
+					"Action": "sts:AssumeRole",
+					"Principal": map[string]interface{}{
+						"Service": "ecs-tasks.amazonaws.com",
+					},
+					"Effect": "Allow",
+					"Sid":    "",
+				},
+			},
+		})
+
+		//
+		// Batch execute Role.
+		//
+
+		batchExecuteRole, err := iam.NewRole(ctx, "arkstorm-batch-execute", &iam.RoleArgs{
+			AssumeRolePolicy: pulumi.String(ecsAssumeRole),
+			Name:             pulumi.String("arkstorm-batch"),
+		})
+		_, err = iam.NewRolePolicyAttachment(ctx, "arkstorm-batch-execute-ecs-task", &iam.RolePolicyAttachmentArgs{
+			Role:      batchExecuteRole.Name,
+			PolicyArn: pulumi.String("arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"),
+		})
+
+		//
+		// Job Role
+		//
+
+		jobRole, err := iam.NewRole(ctx, "arkstorm-job", &iam.RoleArgs{
+			AssumeRolePolicy: pulumi.String(ecsAssumeRole),
+			Name:             pulumi.String("arkstorm-job"),
+		})
+		_, err = iam.NewRolePolicyAttachment(ctx, "arkstorm-batch-job-ecs-task", &iam.RolePolicyAttachmentArgs{
+			Role:      jobRole.Name,
+			PolicyArn: pulumi.String("arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"),
+		})
+		_, err = iam.NewRolePolicyAttachment(ctx, "arkstorm-batch-job-s3", &iam.RolePolicyAttachmentArgs{
+			Role:      jobRole.Name,
+			PolicyArn: pulumi.String("arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess"),
+		})
+
+		//
+		// Compute environment.
+		//
+		/*
+			_, err = batch.NewComputeEnvironment(ctx, "sampleComputeEnvironment", &batch.ComputeEnvironmentArgs{
+				ComputeEnvironmentName: pulumi.String("sample"),
+				ComputeResources: &batch.ComputeEnvironmentComputeResourcesArgs{
+					InstanceRole: ecsInstanceRoleInstanceProfile.Arn,
+					InstanceTypes: pulumi.StringArray{
+						pulumi.String("c4.large"),
+					},
+					MaxVcpus: pulumi.Int(16),
+					MinVcpus: pulumi.Int(0),
+					SecurityGroupIds: pulumi.StringArray{
+						sampleSecurityGroup.ID(),
+					},
+					Subnets: pulumi.StringArray{
+						sampleSubnet.ID(),
+					},
+					Type: pulumi.String("ECS"),
+				},
+				ServiceRole: awsBatchServiceRoleRole.Arn,
+				Type:        pulumi.String("MANAGED"),
+			}, pulumi.DependsOn([]pulumi.Resource{
+				awsBatchServiceRoleRolePolicyAttachment,
+			}))*/
+
 		fmt.Println(gateway)
 		fmt.Println(securityGroup)
 		fmt.Println(subnetPublic)
@@ -129,6 +211,9 @@ func main() {
 		fmt.Println(routePrivate)
 		fmt.Println(rtaPublic)
 		fmt.Println(rtaPrivate)
+		fmt.Println(repo)
+		fmt.Println(batchExecuteRole)
+		fmt.Println(jobRole)
 
 		return nil
 	})
