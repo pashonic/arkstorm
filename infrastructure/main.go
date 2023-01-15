@@ -3,7 +3,9 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 
+	"github.com/pulumi/pulumi-aws/sdk/v5/go/aws/batch"
 	"github.com/pulumi/pulumi-aws/sdk/v5/go/aws/ec2"
 	"github.com/pulumi/pulumi-aws/sdk/v5/go/aws/ecr"
 	"github.com/pulumi/pulumi-aws/sdk/v5/go/aws/iam"
@@ -145,15 +147,15 @@ func main() {
 		})
 
 		//
-		// Batch execute Role.
+		// Execute Role.
 		//
 
-		batchExecuteRole, err := iam.NewRole(ctx, "arkstorm-batch-execute", &iam.RoleArgs{
+		executeRole, err := iam.NewRole(ctx, "arkstorm-execute", &iam.RoleArgs{
 			AssumeRolePolicy: pulumi.String(ecsAssumeRole),
-			Name:             pulumi.String("arkstorm-batch"),
+			Name:             pulumi.String("arkstorm-execute"),
 		})
-		_, err = iam.NewRolePolicyAttachment(ctx, "arkstorm-batch-execute-ecs-task", &iam.RolePolicyAttachmentArgs{
-			Role:      batchExecuteRole.Name,
+		_, err = iam.NewRolePolicyAttachment(ctx, "arkstorm-execute-ecs-task", &iam.RolePolicyAttachmentArgs{
+			Role:      executeRole.Name,
 			PolicyArn: pulumi.String("arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"),
 		})
 
@@ -175,31 +177,84 @@ func main() {
 		})
 
 		//
+		// Compute Role
+		//
+
+		computeRole, err := iam.NewServiceLinkedRole(ctx, "arkstorm-compute", &iam.ServiceLinkedRoleArgs{
+			AwsServiceName: pulumi.String("batch.amazonaws.com"),
+		})
+
+		//
 		// Compute environment.
 		//
-		/*
-			_, err = batch.NewComputeEnvironment(ctx, "sampleComputeEnvironment", &batch.ComputeEnvironmentArgs{
-				ComputeEnvironmentName: pulumi.String("sample"),
-				ComputeResources: &batch.ComputeEnvironmentComputeResourcesArgs{
-					InstanceRole: ecsInstanceRoleInstanceProfile.Arn,
-					InstanceTypes: pulumi.StringArray{
-						pulumi.String("c4.large"),
-					},
-					MaxVcpus: pulumi.Int(16),
-					MinVcpus: pulumi.Int(0),
-					SecurityGroupIds: pulumi.StringArray{
-						sampleSecurityGroup.ID(),
-					},
-					Subnets: pulumi.StringArray{
-						sampleSubnet.ID(),
-					},
-					Type: pulumi.String("ECS"),
+
+		computeEnv, err := batch.NewComputeEnvironment(ctx, "arkstorm-compute-deleteme", &batch.ComputeEnvironmentArgs{
+			ComputeEnvironmentName: pulumi.String("arkstorm-compute-deleteme"),
+			ComputeResources: &batch.ComputeEnvironmentComputeResourcesArgs{
+				MaxVcpus: pulumi.Int(1),
+				SecurityGroupIds: pulumi.StringArray{
+					securityGroup.ID(),
 				},
-				ServiceRole: awsBatchServiceRoleRole.Arn,
-				Type:        pulumi.String("MANAGED"),
-			}, pulumi.DependsOn([]pulumi.Resource{
-				awsBatchServiceRoleRolePolicyAttachment,
-			}))*/
+				Subnets: pulumi.StringArray{
+					subnetPrivate.ID(),
+				},
+				Type: pulumi.String("FARGATE_SPOT"),
+			},
+			ServiceRole: computeRole.Arn,
+			Type:        pulumi.String("MANAGED"),
+		}, pulumi.DependsOn([]pulumi.Resource{
+			computeRole,
+		}))
+		if err != nil {
+			return err
+		}
+
+		jobQueue, err := batch.NewJobQueue(ctx, "testQueue", &batch.JobQueueArgs{
+			State:    pulumi.String("ENABLED"),
+			Priority: pulumi.Int(1),
+			ComputeEnvironments: pulumi.StringArray{
+				computeEnv.Arn,
+			},
+		})
+
+		jobDef := pulumi.All(jobRole.Arn, executeRole.Arn).ApplyT(
+			func(args []interface{}) *batch.JobDefinition {
+				jobRoleArn := args[0].(string)
+				executeRoleArn := args[1].(string)
+
+				jobDefContainerProperties, err := json.Marshal(map[string]interface{}{
+					"image":            "602525097839.dkr.ecr.us-west-2.amazonaws.com/arkstormrepo:latest",
+					"jobRoleArn":       jobRoleArn,
+					"executionRoleArn": executeRoleArn,
+					"logConfiguration": map[string]interface{}{
+						"logDriver": "awslogs",
+					},
+					"resourceRequirements": []interface{}{
+						map[string]interface{}{
+							"value": "1",
+							"type":  "VCPU",
+						},
+						map[string]interface{}{
+							"value": "2048",
+							"type":  "MEMORY",
+						},
+					},
+				})
+				if err != nil {
+					log.Fatal(err)
+				}
+
+				definition, err := batch.NewJobDefinition(ctx, "stormdef", &batch.JobDefinitionArgs{
+					PlatformCapabilities: pulumi.StringArray{
+						pulumi.String("FARGATE"),
+					},
+					ContainerProperties: pulumi.String(jobDefContainerProperties),
+					Type:                pulumi.String("container"),
+					Name:                pulumi.String("arkstormdef"),
+				})
+
+				return definition
+			})
 
 		fmt.Println(gateway)
 		fmt.Println(securityGroup)
@@ -212,8 +267,12 @@ func main() {
 		fmt.Println(rtaPublic)
 		fmt.Println(rtaPrivate)
 		fmt.Println(repo)
-		fmt.Println(batchExecuteRole)
+		fmt.Println(executeRole)
 		fmt.Println(jobRole)
+		fmt.Println(computeRole)
+		fmt.Println(computeEnv)
+		fmt.Println(jobQueue)
+		fmt.Println(jobDef)
 
 		return nil
 	})
