@@ -1,3 +1,3 @@
-name: quickstart
+name: arkstorm
 runtime: go
-description: A minimal AWS Go Pulumi program
+description: Automatic youtube content creator
