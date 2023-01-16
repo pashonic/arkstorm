@@ -11,13 +11,17 @@ import (
 	"github.com/pulumi/pulumi-aws/sdk/v5/go/aws/iam"
 	"github.com/pulumi/pulumi-aws/sdk/v5/go/aws/s3"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
+	"github.com/pulumi/pulumi/sdk/v3/go/pulumi/config"
 )
 
 func main() {
 	pulumi.Run(func(ctx *pulumi.Context) error {
 
+		awsConf := config.New(ctx, "aws")
+		region := awsConf.Require("region")
+
 		//
-		// Buckets.
+		// Buckets resources
 		//
 
 		configBucket, err := s3.NewBucket(ctx, "config", &s3.BucketArgs{
@@ -35,13 +39,13 @@ func main() {
 		}
 
 		//
-		// Networking
+		// Networking resources
 		//
 
 		vpc, err := ec2.NewVpc(ctx, "main", &ec2.VpcArgs{
 			CidrBlock: pulumi.String("10.0.0.0/16"),
 			Tags: pulumi.StringMap{
-				"Name": pulumi.String(ctx.Project()),
+				"Name": pulumi.String(fmt.Sprintf("%s-%s", ctx.Project(), ctx.Stack())),
 			},
 		})
 		if err != nil {
@@ -62,95 +66,101 @@ func main() {
 				},
 			},
 			Tags: pulumi.StringMap{
-				"Name": pulumi.String(ctx.Project()),
-			},
-		})
-
-		gateway, err := ec2.NewInternetGateway(ctx, "gw", &ec2.InternetGatewayArgs{
-			VpcId: vpc.ID(),
-			Tags: pulumi.StringMap{
-				"Name": pulumi.String("arkstorm"),
+				"Name": pulumi.String(fmt.Sprintf("%s-%s", ctx.Project(), ctx.Stack())),
 			},
 		})
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		subnetPublic, err := ec2.NewSubnet(ctx, "public-subnet", &ec2.SubnetArgs{
+		internetGateway, err := ec2.NewInternetGateway(ctx, "internetGateway", &ec2.InternetGatewayArgs{
+			VpcId: vpc.ID(),
+			Tags: pulumi.StringMap{
+				"Name": pulumi.String(fmt.Sprintf("%s-%s", ctx.Project(), ctx.Stack())),
+			},
+		})
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		subnetPublic, err := ec2.NewSubnet(ctx, "public", &ec2.SubnetArgs{
 			VpcId:     vpc.ID(),
 			CidrBlock: pulumi.String("10.0.0.0/20"),
 			Tags: pulumi.StringMap{
-				"Name": pulumi.String("arkstorm-public"),
+				"Name": pulumi.String(fmt.Sprintf("%s-%s-public", ctx.Project(), ctx.Stack())),
 			},
 		})
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		subnetPrivate, err := ec2.NewSubnet(ctx, "private-subnet", &ec2.SubnetArgs{
+		subnetPrivate, err := ec2.NewSubnet(ctx, "private", &ec2.SubnetArgs{
 			VpcId:     vpc.ID(),
 			CidrBlock: pulumi.String("10.0.128.0/20"),
 			Tags: pulumi.StringMap{
-				"Name": pulumi.String("arkstorm-private"),
+				"Name": pulumi.String(fmt.Sprintf("%s-%s-private", ctx.Project(), ctx.Stack())),
 			},
 		})
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		elasticIp, err := ec2.NewEip(ctx, "one", &ec2.EipArgs{
+		elasticIp, err := ec2.NewEip(ctx, "elasticip", &ec2.EipArgs{
 			Vpc: pulumi.Bool(true),
+			Tags: pulumi.StringMap{
+				"Name": pulumi.String(fmt.Sprintf("%s-%s-%s", ctx.Project(), ctx.Stack(), region)),
+			},
 		})
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		nat, err := ec2.NewNatGateway(ctx, "example", &ec2.NatGatewayArgs{
+		natGateway, err := ec2.NewNatGateway(ctx, "nat", &ec2.NatGatewayArgs{
 			AllocationId: elasticIp.ID(),
 			SubnetId:     subnetPublic.ID(),
 			Tags: pulumi.StringMap{
-				"Name": pulumi.String("gw NAT"),
+				"Name": pulumi.String(fmt.Sprintf("%s-%s", ctx.Project(), ctx.Stack())),
 			},
 		}, pulumi.DependsOn([]pulumi.Resource{
-			gateway,
+			internetGateway,
 		}))
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		routePublic, err := ec2.NewRouteTable(ctx, "route-public", &ec2.RouteTableArgs{
+		routePublic, err := ec2.NewRouteTable(ctx, "public", &ec2.RouteTableArgs{
 			VpcId: vpc.ID(),
 			Routes: ec2.RouteTableRouteArray{
 				&ec2.RouteTableRouteArgs{
 					CidrBlock: pulumi.String("0.0.0.0/0"),
-					GatewayId: gateway.ID(),
+					GatewayId: internetGateway.ID(),
 				},
 			},
 			Tags: pulumi.StringMap{
-				"Name": pulumi.String("arkstorm-public"),
+				"Name": pulumi.String(fmt.Sprintf("%s-%s-public", ctx.Project(), ctx.Stack())),
 			},
 		})
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		routePrivate, err := ec2.NewRouteTable(ctx, "route-private", &ec2.RouteTableArgs{
+		routePrivate, err := ec2.NewRouteTable(ctx, "private", &ec2.RouteTableArgs{
 			VpcId: vpc.ID(),
 			Routes: ec2.RouteTableRouteArray{
 				&ec2.RouteTableRouteArgs{
-					CidrBlock: pulumi.String("0.0.0.0/0"),
-					GatewayId: nat.ID(),
+					CidrBlock:    pulumi.String("0.0.0.0/0"),
+					NatGatewayId: natGateway.ID(),
 				},
 			},
 			Tags: pulumi.StringMap{
-				"Name": pulumi.String("arkstorm-Private"),
+				"Name": pulumi.String(fmt.Sprintf("%s-%s-private", ctx.Project(), ctx.Stack())),
 			},
 		})
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		rtaPublic, err := ec2.NewRouteTableAssociation(ctx, "rta-Public", &ec2.RouteTableAssociationArgs{
+		_, err = ec2.NewRouteTableAssociation(ctx, "rta-Public", &ec2.RouteTableAssociationArgs{
 			SubnetId:     subnetPublic.ID(),
 			RouteTableId: routePublic.ID(),
 		})
@@ -158,7 +168,7 @@ func main() {
 			log.Fatal(err)
 		}
 
-		rtaPrivate, err := ec2.NewRouteTableAssociation(ctx, "rta-Private", &ec2.RouteTableAssociationArgs{
+		_, err = ec2.NewRouteTableAssociation(ctx, "rta-Private", &ec2.RouteTableAssociationArgs{
 			SubnetId:     subnetPrivate.ID(),
 			RouteTableId: routePrivate.ID(),
 		})
@@ -166,16 +176,24 @@ func main() {
 			log.Fatal(err)
 		}
 
-		repo, err := ecr.NewRepository(ctx, "arkstormrepo", &ecr.RepositoryArgs{
+		//
+		// ECR Repository
+		//
+
+		dockerRepo, err := ecr.NewRepository(ctx, "docker-repo", &ecr.RepositoryArgs{
 			ImageScanningConfiguration: &ecr.RepositoryImageScanningConfigurationArgs{
 				ScanOnPush: pulumi.Bool(false),
 			},
 			ImageTagMutability: pulumi.String("MUTABLE"),
-			Name:               pulumi.String("arkstormrepo"),
+			Name:               pulumi.String(fmt.Sprintf("%s-%s", ctx.Project(), ctx.Stack())),
 		})
 		if err != nil {
 			log.Fatal(err)
 		}
+
+		//
+		// Iam resources
+		//
 
 		ecsAssumeRole, err := json.Marshal(map[string]interface{}{
 			"Version": "2012-10-17",
@@ -191,18 +209,14 @@ func main() {
 			},
 		})
 
-		//
-		// Execute Role.
-		//
-
-		executeRole, err := iam.NewRole(ctx, "arkstorm-execute", &iam.RoleArgs{
+		executeRole, err := iam.NewRole(ctx, "execute", &iam.RoleArgs{
 			AssumeRolePolicy: pulumi.String(ecsAssumeRole),
-			Name:             pulumi.String("arkstorm-execute"),
+			NamePrefix:       pulumi.String(fmt.Sprintf("%s-%s-execute", ctx.Project(), ctx.Stack())),
 		})
 		if err != nil {
 			log.Fatal(err)
 		}
-		_, err = iam.NewRolePolicyAttachment(ctx, "arkstorm-execute-ecs-task", &iam.RolePolicyAttachmentArgs{
+		_, err = iam.NewRolePolicyAttachment(ctx, "execute-ecs-task", &iam.RolePolicyAttachmentArgs{
 			Role:      executeRole.Name,
 			PolicyArn: pulumi.String("arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"),
 		})
@@ -210,25 +224,21 @@ func main() {
 			log.Fatal(err)
 		}
 
-		//
-		// Job Role
-		//
-
-		jobRole, err := iam.NewRole(ctx, "arkstorm-job", &iam.RoleArgs{
+		jobRole, err := iam.NewRole(ctx, "job", &iam.RoleArgs{
 			AssumeRolePolicy: pulumi.String(ecsAssumeRole),
-			Name:             pulumi.String("arkstorm-job"),
+			NamePrefix:       pulumi.String(fmt.Sprintf("%s-%s-job", ctx.Project(), ctx.Stack())),
 		})
 		if err != nil {
 			log.Fatal(err)
 		}
-		_, err = iam.NewRolePolicyAttachment(ctx, "arkstorm-batch-job-ecs-task", &iam.RolePolicyAttachmentArgs{
+		_, err = iam.NewRolePolicyAttachment(ctx, "job-ecs-task", &iam.RolePolicyAttachmentArgs{
 			Role:      jobRole.Name,
 			PolicyArn: pulumi.String("arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"),
 		})
 		if err != nil {
 			log.Fatal(err)
 		}
-		_, err = iam.NewRolePolicyAttachment(ctx, "arkstorm-batch-job-s3", &iam.RolePolicyAttachmentArgs{
+		_, err = iam.NewRolePolicyAttachment(ctx, "job-s3", &iam.RolePolicyAttachmentArgs{
 			Role:      jobRole.Name,
 			PolicyArn: pulumi.String("arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess"),
 		})
@@ -236,11 +246,7 @@ func main() {
 			log.Fatal(err)
 		}
 
-		//
-		// Compute Role
-		//
-
-		computeRole, err := iam.NewServiceLinkedRole(ctx, "arkstorm-compute", &iam.ServiceLinkedRoleArgs{
+		computeRole, err := iam.NewServiceLinkedRole(ctx, "compute", &iam.ServiceLinkedRoleArgs{
 			AwsServiceName: pulumi.String("batch.amazonaws.com"),
 		})
 		if err != nil {
@@ -248,11 +254,11 @@ func main() {
 		}
 
 		//
-		// Compute environment.
+		// Batch resources
 		//
 
-		computeEnv, err := batch.NewComputeEnvironment(ctx, "arkstorm-compute-deleteme", &batch.ComputeEnvironmentArgs{
-			ComputeEnvironmentName: pulumi.String("arkstorm-compute-deleteme"),
+		computeEnv, err := batch.NewComputeEnvironment(ctx, "compute", &batch.ComputeEnvironmentArgs{
+			ComputeEnvironmentName: pulumi.String(fmt.Sprintf("%s-%s", ctx.Project(), ctx.Stack())),
 			ComputeResources: &batch.ComputeEnvironmentComputeResourcesArgs{
 				MaxVcpus: pulumi.Int(1),
 				SecurityGroupIds: pulumi.StringArray{
@@ -272,9 +278,10 @@ func main() {
 			log.Fatal(err)
 		}
 
-		jobQueue, err := batch.NewJobQueue(ctx, "testQueue", &batch.JobQueueArgs{
+		_, err = batch.NewJobQueue(ctx, "jobqueue", &batch.JobQueueArgs{
 			State:    pulumi.String("ENABLED"),
 			Priority: pulumi.Int(1),
+			Name:     pulumi.String(fmt.Sprintf("%s-%s", ctx.Project(), ctx.Stack())),
 			ComputeEnvironments: pulumi.StringArray{
 				computeEnv.Arn,
 			},
@@ -283,7 +290,7 @@ func main() {
 			log.Fatal(err)
 		}
 
-		jobDefinition := pulumi.All(jobRole.Arn, executeRole.Arn).ApplyT(
+		pulumi.All(jobRole.Arn, executeRole.Arn).ApplyT(
 			func(args []interface{}) *batch.JobDefinition {
 				jobRoleArn := args[0].(string)
 				executeRoleArn := args[1].(string)
@@ -310,40 +317,26 @@ func main() {
 					log.Fatal(err)
 				}
 
-				jobDefinition, err := batch.NewJobDefinition(ctx, "stormdef", &batch.JobDefinitionArgs{
+				jobDefinition, err := batch.NewJobDefinition(ctx, "jobdefinition", &batch.JobDefinitionArgs{
 					PlatformCapabilities: pulumi.StringArray{
 						pulumi.String("FARGATE"),
 					},
 					ContainerProperties: pulumi.String(jobDefContainerProperties),
 					Type:                pulumi.String("container"),
-					Name:                pulumi.String("arkstormdef"),
+					Name:                pulumi.String(fmt.Sprintf("%s-%s", ctx.Project(), ctx.Stack())),
 				})
 				if err != nil {
 					log.Fatal(err)
 				}
 
+				ctx.Export("Job Definition", jobDefinition.Name)
+
 				return jobDefinition
 			})
 
-		fmt.Println(credsBucket)
-		fmt.Println(configBucket)
-		fmt.Println(gateway)
-		fmt.Println(securityGroup)
-		fmt.Println(subnetPublic)
-		fmt.Println(subnetPrivate)
-		fmt.Println(nat)
-		fmt.Println(elasticIp)
-		fmt.Println(routePublic)
-		fmt.Println(routePrivate)
-		fmt.Println(rtaPublic)
-		fmt.Println(rtaPrivate)
-		fmt.Println(repo)
-		fmt.Println(executeRole)
-		fmt.Println(jobRole)
-		fmt.Println(computeRole)
-		fmt.Println(computeEnv)
-		fmt.Println(jobQueue)
-		fmt.Println(jobDefinition)
+		ctx.Export("Docker Repo Url", dockerRepo.RepositoryUrl)
+		ctx.Export("config Bucket", configBucket.Bucket)
+		ctx.Export("creds Bucket", credsBucket.Bucket)
 
 		return nil
 	})
