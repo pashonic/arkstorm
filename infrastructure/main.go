@@ -290,13 +290,14 @@ func main() {
 			log.Fatal(err)
 		}
 
-		pulumi.All(jobRole.Arn, executeRole.Arn).ApplyT(
+		pulumi.All(jobRole.Arn, executeRole.Arn, dockerRepo.RepositoryUrl).ApplyT(
 			func(args []interface{}) *batch.JobDefinition {
 				jobRoleArn := args[0].(string)
 				executeRoleArn := args[1].(string)
+				dockerRepoUrl := args[2].(string)
 
 				jobDefContainerProperties, err := json.Marshal(map[string]interface{}{
-					"image":            "602525097839.dkr.ecr.us-west-2.amazonaws.com/arkstormrepo:latest",
+					"image":            fmt.Sprintf("%s:latest", dockerRepoUrl),
 					"jobRoleArn":       jobRoleArn,
 					"executionRoleArn": executeRoleArn,
 					"logConfiguration": map[string]interface{}{
