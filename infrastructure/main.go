@@ -9,7 +9,9 @@ import (
 	"github.com/pulumi/pulumi-aws/sdk/v5/go/aws/ec2"
 	"github.com/pulumi/pulumi-aws/sdk/v5/go/aws/ecr"
 	"github.com/pulumi/pulumi-aws/sdk/v5/go/aws/iam"
+	"github.com/pulumi/pulumi-aws/sdk/v5/go/aws/kms"
 	"github.com/pulumi/pulumi-aws/sdk/v5/go/aws/s3"
+	"github.com/pulumi/pulumi-aws/sdk/v5/go/aws/secretsmanager"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi/config"
 )
@@ -18,7 +20,42 @@ func main() {
 	pulumi.Run(func(ctx *pulumi.Context) error {
 
 		awsConf := config.New(ctx, "aws")
+		userConf := config.New(ctx, "")
 		region := awsConf.Require("region")
+
+		//
+		// Access objects
+		//
+
+		kmsKey, err := kms.NewKey(ctx, "encrypter", &kms.KeyArgs{
+			Description: pulumi.String(fmt.Sprintf("%s-%s", ctx.Project(), ctx.Stack())),
+		})
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		secrets, err := secretsmanager.NewSecret(ctx, fmt.Sprintf("%s-%s", ctx.Project(), ctx.Stack()), &secretsmanager.SecretArgs{
+			KmsKeyId: kmsKey.ID(),
+		})
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		pulumi.All(secrets.Name, userConf.RequireSecret("weatherbell-username"), userConf.RequireSecret("weatherbell-password")).ApplyT(
+			func(args []interface{}) *secretsmanager.SecretVersion {
+				secretId := args[0].(string)
+				username := args[1].(string)
+				password := args[2].(string)
+				jsonBytes, _ := json.Marshal(map[string]string{"weatherbell-username": username, "weatherbell-password": password})
+				secretVersion, err := secretsmanager.NewSecretVersion(ctx, "weatherbell-creds", &secretsmanager.SecretVersionArgs{
+					SecretId:     pulumi.String(secretId),
+					SecretString: pulumi.String(jsonBytes),
+				})
+				if err != nil {
+					log.Fatal(err)
+				}
+				return secretVersion
+			})
 
 		//
 		// Buckets resources

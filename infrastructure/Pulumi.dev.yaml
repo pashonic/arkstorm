@@ -1,3 +1,8 @@
-encryptionsalt: v1:b0x/JLgtNDk=:v1:Lg841YLFjUPu1NXC:LZ+cJHS5fACvOrGZCFCWtL2rNVilvA==
+secretsprovider: awskms://12e32f8a-e56c-40a2-bab6-fc3be70d6e3b?region=us-west-2
+encryptedkey: AQICAHiRetEXxMKQpIutzbZwXEm4+z0MXE4KiDA+fq+rWtE0UwEZAIl72lN0m/XaT2hVJl2SAAAAfjB8BgkqhkiG9w0BBwagbzBtAgEAMGgGCSqGSIb3DQEHATAeBglghkgBZQMEAS4wEQQM0rVYpa/SMhB2K64KAgEQgDuZAfwkIggChS6vWiDkjVrscnr9EfUrV1z5h9KJJ2bM7DJsYfWXGvtNFvq0ZedWBa+/WqcJv5+d/Yj7zA==
 config:
+  arkstorm:weatherbell-password:
+    secure: v1:6qynnLVc+zMjCY2y:umRyO2NLDG0+Hgx1TEMnIQo0LFUqX7q0IVY=
+  arkstorm:weatherbell-username:
+    secure: v1:rgmibsa1CfCNg5OF:lh7Kd74k4IANeutDDC/rC1kh7YbKALIw
   aws:region: us-west-2
