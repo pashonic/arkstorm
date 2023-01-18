@@ -332,11 +332,12 @@ func main() {
 		// Create job definition
 		//
 
-		pulumi.All(jobRole.Arn, executeRole.Arn, dockerRepo.RepositoryUrl).ApplyT(
+		pulumi.All(jobRole.Arn, executeRole.Arn, dockerRepo.RepositoryUrl, secrets.Arn).ApplyT(
 			func(args []interface{}) *batch.JobDefinition {
 				jobRoleArn := args[0].(string)
 				executeRoleArn := args[1].(string)
 				dockerRepoUrl := args[2].(string)
+				secretsArn := args[3].(string)
 
 				jobDefContainerProperties, err := json.Marshal(map[string]interface{}{
 					"image":            fmt.Sprintf("%s:latest", dockerRepoUrl),
@@ -353,6 +354,16 @@ func main() {
 						map[string]interface{}{
 							"value": "2048",
 							"type":  "MEMORY",
+						},
+					},
+					"secrets": []interface{}{
+						map[string]interface{}{
+							"name":      "WEATHERBELL_USERNAME",
+							"valueFrom": fmt.Sprintf("%s:weatherbell-username::", secretsArn),
+						},
+						map[string]interface{}{
+							"name":      "WEATHERBELL_PASSWORD",
+							"valueFrom": fmt.Sprintf("%s:weatherbell-password::", secretsArn),
 						},
 					},
 				})
