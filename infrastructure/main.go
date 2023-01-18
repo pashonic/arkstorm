@@ -406,7 +406,7 @@ func main() {
 								"s3:GetObject",
 								"kms:Decrypt",
 								"s3:ListBucket",
-								"secretsmanager:GetSecretValue",
+								"secretsmanager:GetSecretValue", //BUGBUG: execute role needs to do this, not job.
 							},
 							Resources: []string{
 								configBucketArn,
@@ -423,7 +423,7 @@ func main() {
 				policy, err := iam.NewPolicy(ctx, "job-resource-policy", &iam.PolicyArgs{
 					Path:        pulumi.String("/"),
 					Name:        pulumi.String(fmt.Sprintf("%s-%s-job", ctx.Project(), ctx.Stack())),
-					Description: pulumi.String("S3 Access"),
+					Description: pulumi.String("Secrets Manager and S3 Access"),
 					Policy:      pulumi.String(policyData.Json),
 				})
 				if err != nil {
