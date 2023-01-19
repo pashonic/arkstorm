@@ -388,25 +388,29 @@ func main() {
 			})
 
 		//
-		// Attach resource specific access to job role
+		// Attach resource specific access to roles
 		//
 
-		pulumi.All(configBucket.Arn, credsBucket.Arn, kmsKey.Arn, jobRole.Name, secrets.Arn).ApplyT(
-			func(args []interface{}) *iam.Role {
+		pulumi.All(configBucket.Arn, credsBucket.Arn, kmsKey.Arn, secrets.Arn, jobRole.Name, executeRole.Name).ApplyT(
+			func(args []interface{}) *pulumi.Output {
 				configBucketArn := args[0].(string)
 				credsBucketArn := args[1].(string)
 				kmsKeyArn := args[2].(string)
-				jobRoleName := args[3].(string)
-				secretsArn := args[4].(string)
+				secretsArn := args[3].(string)
+				jobRoleName := args[4].(string)
+				executeRoleName := args[5].(string)
 
-				policyData, _ := iam.GetPolicyDocument(ctx, &iam.GetPolicyDocumentArgs{
+				//
+				// Job role access
+				//
+
+				jobsPolicyData, _ := iam.GetPolicyDocument(ctx, &iam.GetPolicyDocumentArgs{
 					Statements: []iam.GetPolicyDocumentStatement{
 						{
 							Actions: []string{
 								"s3:GetObject",
 								"kms:Decrypt",
 								"s3:ListBucket",
-								"secretsmanager:GetSecretValue", //BUGBUG: execute role needs to do this, not job.
 							},
 							Resources: []string{
 								configBucketArn,
@@ -414,31 +418,62 @@ func main() {
 								credsBucketArn,
 								credsBucketArn + "/*",
 								kmsKeyArn,
+							},
+						},
+					},
+				}, nil)
+				jobPolicy, err := iam.NewPolicy(ctx, "job-resource-policy", &iam.PolicyArgs{
+					Path:        pulumi.String("/"),
+					Name:        pulumi.String(fmt.Sprintf("%s-%s-job", ctx.Project(), ctx.Stack())),
+					Description: pulumi.String("S3 Access"),
+					Policy:      pulumi.String(jobsPolicyData.Json),
+				})
+				if err != nil {
+					log.Fatal(err)
+				}
+				_, err = iam.NewRolePolicyAttachment(ctx, "job-resource-attachment", &iam.RolePolicyAttachmentArgs{
+					Role:      pulumi.String(jobRoleName),
+					PolicyArn: jobPolicy.Arn,
+				})
+				if err != nil {
+					log.Fatal(err)
+				}
+
+				//
+				// Execute role access
+				//
+
+				executePolicyData, _ := iam.GetPolicyDocument(ctx, &iam.GetPolicyDocumentArgs{
+					Statements: []iam.GetPolicyDocumentStatement{
+						{
+							Actions: []string{
+								"kms:Decrypt",
+								"secretsmanager:GetSecretValue",
+							},
+							Resources: []string{
 								secretsArn,
 							},
 						},
 					},
 				}, nil)
-
-				policy, err := iam.NewPolicy(ctx, "job-resource-policy", &iam.PolicyArgs{
+				executePolicy, err := iam.NewPolicy(ctx, "execute-resource-policy", &iam.PolicyArgs{
 					Path:        pulumi.String("/"),
-					Name:        pulumi.String(fmt.Sprintf("%s-%s-job", ctx.Project(), ctx.Stack())),
-					Description: pulumi.String("Secrets Manager and S3 Access"),
-					Policy:      pulumi.String(policyData.Json),
+					Name:        pulumi.String(fmt.Sprintf("%s-%s-execute", ctx.Project(), ctx.Stack())),
+					Description: pulumi.String("Secrets Manager Access"),
+					Policy:      pulumi.String(executePolicyData.Json),
+				})
+				if err != nil {
+					log.Fatal(err)
+				}
+				_, err = iam.NewRolePolicyAttachment(ctx, "execute-resource-attachment", &iam.RolePolicyAttachmentArgs{
+					Role:      pulumi.String(executeRoleName),
+					PolicyArn: executePolicy.Arn,
 				})
 				if err != nil {
 					log.Fatal(err)
 				}
 
-				_, err = iam.NewRolePolicyAttachment(ctx, "job-resource-attachment", &iam.RolePolicyAttachmentArgs{
-					Role:      pulumi.String(jobRoleName),
-					PolicyArn: policy.Arn,
-				})
-				if err != nil {
-					log.Fatal(err)
-				}
-
-				return jobRole
+				return nil
 			})
 
 		ctx.Export("Docker Repo Url", dockerRepo.RepositoryUrl)
