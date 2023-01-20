@@ -6,6 +6,7 @@ import (
 	"log"
 
 	"github.com/pulumi/pulumi-aws/sdk/v5/go/aws/batch"
+	"github.com/pulumi/pulumi-aws/sdk/v5/go/aws/cloudwatch"
 	"github.com/pulumi/pulumi-aws/sdk/v5/go/aws/ec2"
 	"github.com/pulumi/pulumi-aws/sdk/v5/go/aws/ecr"
 	"github.com/pulumi/pulumi-aws/sdk/v5/go/aws/iam"
@@ -316,7 +317,7 @@ func main() {
 			log.Fatal(err)
 		}
 
-		_, err = batch.NewJobQueue(ctx, "jobqueue", &batch.JobQueueArgs{
+		jobQueue, err := batch.NewJobQueue(ctx, "jobqueue", &batch.JobQueueArgs{
 			State:    pulumi.String("ENABLED"),
 			Priority: pulumi.Int(1),
 			Name:     pulumi.String(fmt.Sprintf("%s-%s", ctx.Project(), ctx.Stack())),
@@ -332,12 +333,15 @@ func main() {
 		// Create job definition
 		//
 
-		pulumi.All(jobRole.Arn, executeRole.Arn, dockerRepo.RepositoryUrl, secrets.Arn).ApplyT(
-			func(args []interface{}) *batch.JobDefinition {
+		pulumi.All(jobRole.Arn, executeRole.Arn, dockerRepo.RepositoryUrl, secrets.Arn, credsBucket.Bucket, configBucket.Bucket, jobQueue.Arn).ApplyT(
+			func(args []interface{}) *pulumi.Output {
 				jobRoleArn := args[0].(string)
 				executeRoleArn := args[1].(string)
 				dockerRepoUrl := args[2].(string)
 				secretsArn := args[3].(string)
+				credsBucket := args[4].(string)
+				configBucket := args[5].(string)
+				jobQueueArn := args[6].(string)
 
 				jobDefContainerProperties, err := json.Marshal(map[string]interface{}{
 					"image":            fmt.Sprintf("%s:latest", dockerRepoUrl),
@@ -366,6 +370,16 @@ func main() {
 							"valueFrom": fmt.Sprintf("%s:weatherbell-password::", secretsArn),
 						},
 					},
+					"environment": []interface{}{
+						map[string]interface{}{
+							"name":  "AWS_S3_CREDS_BUCKET",
+							"value": fmt.Sprintf("s3://%s", credsBucket),
+						},
+						map[string]interface{}{
+							"name":  "AWS_S3_BUCKET_CONFIG_FILE",
+							"value": fmt.Sprintf("s3://%s/config.toml", configBucket),
+						},
+					},
 				})
 				if err != nil {
 					log.Fatal(err)
@@ -383,8 +397,80 @@ func main() {
 					log.Fatal(err)
 				}
 
+				pulumi.All(jobDefinition.Arn, jobQueueArn).ApplyT(
+					func(args []interface{}) *pulumi.Output {
+						jobDefinitionArn := args[0].(string)
+						jobQueueArn := args[1].(string)
+
+						eventPolicyData, _ := iam.GetPolicyDocument(ctx, &iam.GetPolicyDocumentArgs{
+							Statements: []iam.GetPolicyDocumentStatement{
+								{
+									Actions: []string{
+										"batch:SubmitJob",
+									},
+									Resources: []string{
+										jobDefinitionArn,
+										jobQueueArn,
+									},
+								},
+							},
+						}, nil)
+
+						eventAssumeRole, err := json.Marshal(map[string]interface{}{
+							"Version": "2012-10-17",
+							"Statement": []interface{}{
+								map[string]interface{}{
+									"Action": "sts:AssumeRole",
+									"Principal": map[string]interface{}{
+										"Service": "events.amazonaws.com",
+									},
+									"Effect": "Allow",
+									"Sid":    "",
+								},
+							},
+						})
+
+						eventRole, err := iam.NewRole(ctx, "event", &iam.RoleArgs{
+							AssumeRolePolicy: pulumi.String(eventAssumeRole),
+							NamePrefix:       pulumi.String(fmt.Sprintf("%s-%s-event", ctx.Project(), ctx.Stack())),
+							InlinePolicies: iam.RoleInlinePolicyArray{
+								&iam.RoleInlinePolicyArgs{
+									Name:   pulumi.String("event-policy"),
+									Policy: pulumi.String(eventPolicyData.Json),
+								},
+							},
+						})
+						if err != nil {
+							log.Fatal(err)
+						}
+
+						eventRule, err := cloudwatch.NewEventRule(ctx, "myeventrule", &cloudwatch.EventRuleArgs{
+							ScheduleExpression: pulumi.String("cron(0 */12 * * ? *)"),
+							IsEnabled:          pulumi.Bool(false),
+						})
+						if err != nil {
+							log.Fatal(err)
+						}
+
+						_, err = cloudwatch.NewEventTarget(ctx, "myeventtarget", &cloudwatch.EventTargetArgs{
+							Rule: eventRule.Name,
+							BatchTarget: &cloudwatch.EventTargetBatchTargetArgs{
+								JobDefinition: pulumi.String(jobDefinitionArn),
+								JobName:       pulumi.String(fmt.Sprintf("%s-%s-event", ctx.Project(), ctx.Stack())),
+							},
+							RoleArn: eventRole.Arn,
+							Arn:     pulumi.String(jobQueueArn),
+						})
+						if err != nil {
+							log.Fatal(err)
+						}
+
+						return nil
+
+					})
+
 				ctx.Export("Job Definition", jobDefinition.Name)
-				return jobDefinition
+				return nil
 			})
 
 		//
@@ -422,6 +508,11 @@ func main() {
 						},
 					},
 				}, nil)
+
+				//
+				// Job role access
+				//
+
 				jobPolicy, err := iam.NewPolicy(ctx, "job-resource-policy", &iam.PolicyArgs{
 					Path:        pulumi.String("/"),
 					Name:        pulumi.String(fmt.Sprintf("%s-%s-job", ctx.Project(), ctx.Stack())),
@@ -452,6 +543,7 @@ func main() {
 							},
 							Resources: []string{
 								secretsArn,
+								kmsKeyArn,
 							},
 						},
 					},
