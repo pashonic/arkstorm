@@ -34,13 +34,16 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-
 		secrets, err := secretsmanager.NewSecret(ctx, fmt.Sprintf("%s-%s", ctx.Project(), ctx.Stack()), &secretsmanager.SecretArgs{
 			KmsKeyId: kmsKey.ID(),
 		})
 		if err != nil {
 			log.Fatal(err)
 		}
+
+		//
+		// Storage pulumi secrets into Secrets Manager, layer 2 process
+		//
 
 		pulumi.All(secrets.Name, userConf.RequireSecret("weatherbell-username"), userConf.RequireSecret("weatherbell-password")).ApplyT(
 			func(args []interface{}) *secretsmanager.SecretVersion {
@@ -59,7 +62,7 @@ func main() {
 			})
 
 		//
-		// Buckets resources
+		// Config file bucket
 		//
 
 		configBucket, err := s3.NewBucket(ctx, "config", &s3.BucketArgs{
@@ -68,6 +71,10 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
+
+		//
+		// Youtube credentials bucket
+		//
 
 		credsBucket, err := s3.NewBucket(ctx, "creds", &s3.BucketArgs{
 			BucketPrefix: pulumi.String(fmt.Sprintf("%s-creds-%s-", ctx.Project(), ctx.Stack())),
@@ -97,7 +104,6 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-
 		securityGroup, err := ec2.NewDefaultSecurityGroup(ctx, "vpc-default", &ec2.DefaultSecurityGroupArgs{
 			VpcId:   vpc.ID(),
 			Ingress: ec2.DefaultSecurityGroupIngressArray{},
@@ -118,7 +124,6 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-
 		internetGateway, err := ec2.NewInternetGateway(ctx, "internetGateway", &ec2.InternetGatewayArgs{
 			VpcId: vpc.ID(),
 			Tags: pulumi.StringMap{
@@ -128,7 +133,6 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-
 		subnetPublic, err := ec2.NewSubnet(ctx, "public", &ec2.SubnetArgs{
 			VpcId:     vpc.ID(),
 			CidrBlock: pulumi.String("10.0.0.0/20"),
@@ -139,7 +143,6 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-
 		subnetPrivate, err := ec2.NewSubnet(ctx, "private", &ec2.SubnetArgs{
 			VpcId:     vpc.ID(),
 			CidrBlock: pulumi.String("10.0.128.0/20"),
@@ -150,7 +153,6 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-
 		elasticIp, err := ec2.NewEip(ctx, "elasticip", &ec2.EipArgs{
 			Vpc: pulumi.Bool(true),
 			Tags: pulumi.StringMap{
@@ -160,7 +162,6 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-
 		natGateway, err := ec2.NewNatGateway(ctx, "nat", &ec2.NatGatewayArgs{
 			AllocationId: elasticIp.ID(),
 			SubnetId:     subnetPublic.ID(),
@@ -173,7 +174,6 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-
 		routePublic, err := ec2.NewRouteTable(ctx, "public", &ec2.RouteTableArgs{
 			VpcId: vpc.ID(),
 			Routes: ec2.RouteTableRouteArray{
@@ -189,7 +189,6 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-
 		routePrivate, err := ec2.NewRouteTable(ctx, "private", &ec2.RouteTableArgs{
 			VpcId: vpc.ID(),
 			Routes: ec2.RouteTableRouteArray{
@@ -205,7 +204,6 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-
 		_, err = ec2.NewRouteTableAssociation(ctx, "rta-Public", &ec2.RouteTableAssociationArgs{
 			SubnetId:     subnetPublic.ID(),
 			RouteTableId: routePublic.ID(),
@@ -213,7 +211,6 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-
 		_, err = ec2.NewRouteTableAssociation(ctx, "rta-Private", &ec2.RouteTableAssociationArgs{
 			SubnetId:     subnetPrivate.ID(),
 			RouteTableId: routePrivate.ID(),
@@ -238,7 +235,7 @@ func main() {
 		}
 
 		//
-		// Iam resources
+		// Create batch execute role
 		//
 
 		ecsAssumeRole, err := json.Marshal(map[string]interface{}{
@@ -254,10 +251,9 @@ func main() {
 				},
 			},
 		})
-
 		executeRole, err := iam.NewRole(ctx, "execute", &iam.RoleArgs{
 			AssumeRolePolicy: pulumi.String(ecsAssumeRole),
-			NamePrefix:       pulumi.String(fmt.Sprintf("%s-%s-execute", ctx.Project(), ctx.Stack())),
+			NamePrefix:       pulumi.String(fmt.Sprintf("%s-%s-execute-", ctx.Project(), ctx.Stack())),
 		})
 		if err != nil {
 			log.Fatal(err)
@@ -270,9 +266,13 @@ func main() {
 			log.Fatal(err)
 		}
 
+		//
+		// Create batch job context role (the container access context)
+		//
+
 		jobRole, err := iam.NewRole(ctx, "job", &iam.RoleArgs{
 			AssumeRolePolicy: pulumi.String(ecsAssumeRole),
-			NamePrefix:       pulumi.String(fmt.Sprintf("%s-%s-job", ctx.Project(), ctx.Stack())),
+			NamePrefix:       pulumi.String(fmt.Sprintf("%s-%s-job-", ctx.Project(), ctx.Stack())),
 		})
 		if err != nil {
 			log.Fatal(err)
@@ -284,6 +284,10 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
+
+		//
+		// Create batch compute role
+		//
 
 		computeRole, err := iam.NewServiceLinkedRole(ctx, "compute", &iam.ServiceLinkedRoleArgs{
 			AwsServiceName: pulumi.String("batch.amazonaws.com"),
@@ -330,7 +334,7 @@ func main() {
 		}
 
 		//
-		// Create job definition
+		// Create job definition, layer 2 process
 		//
 
 		pulumi.All(jobRole.Arn, executeRole.Arn, dockerRepo.RepositoryUrl, secrets.Arn, credsBucket.Bucket, configBucket.Bucket, jobQueue.Arn).ApplyT(
@@ -397,10 +401,18 @@ func main() {
 					log.Fatal(err)
 				}
 
+				//
+				// Create scheduled event, layer 3 process
+				//
+
 				pulumi.All(jobDefinition.Arn, jobQueueArn).ApplyT(
 					func(args []interface{}) *pulumi.Output {
 						jobDefinitionArn := args[0].(string)
 						jobQueueArn := args[1].(string)
+
+						//
+						// Create event role
+						//
 
 						eventPolicyData, _ := iam.GetPolicyDocument(ctx, &iam.GetPolicyDocumentArgs{
 							Statements: []iam.GetPolicyDocumentStatement{
@@ -415,7 +427,6 @@ func main() {
 								},
 							},
 						}, nil)
-
 						eventAssumeRole, err := json.Marshal(map[string]interface{}{
 							"Version": "2012-10-17",
 							"Statement": []interface{}{
@@ -429,10 +440,9 @@ func main() {
 								},
 							},
 						})
-
 						eventRole, err := iam.NewRole(ctx, "event", &iam.RoleArgs{
 							AssumeRolePolicy: pulumi.String(eventAssumeRole),
-							NamePrefix:       pulumi.String(fmt.Sprintf("%s-%s-event", ctx.Project(), ctx.Stack())),
+							NamePrefix:       pulumi.String(fmt.Sprintf("%s-%s-event-", ctx.Project(), ctx.Stack())),
 							InlinePolicies: iam.RoleInlinePolicyArray{
 								&iam.RoleInlinePolicyArgs{
 									Name:   pulumi.String("event-policy"),
@@ -444,14 +454,18 @@ func main() {
 							log.Fatal(err)
 						}
 
+						//
+						// Create event with batch job target
+						//
+
 						eventRule, err := cloudwatch.NewEventRule(ctx, "myeventrule", &cloudwatch.EventRuleArgs{
-							ScheduleExpression: pulumi.String("cron(0 */12 * * ? *)"),
+							ScheduleExpression: pulumi.String(fmt.Sprintf("cron(%s)", userConf.Require("default-event-cron"))),
 							IsEnabled:          pulumi.Bool(false),
+							NamePrefix:         pulumi.String(fmt.Sprintf("%s-%s-", ctx.Project(), ctx.Stack())),
 						})
 						if err != nil {
 							log.Fatal(err)
 						}
-
 						_, err = cloudwatch.NewEventTarget(ctx, "myeventtarget", &cloudwatch.EventTargetArgs{
 							Rule: eventRule.Name,
 							BatchTarget: &cloudwatch.EventTargetBatchTargetArgs{
@@ -466,7 +480,6 @@ func main() {
 						}
 
 						return nil
-
 					})
 
 				ctx.Export("Job Definition", jobDefinition.Name)
@@ -474,7 +487,7 @@ func main() {
 			})
 
 		//
-		// Attach resource specific access to roles
+		// Attach resource specific access to roles, layer 2 process
 		//
 
 		pulumi.All(configBucket.Arn, credsBucket.Arn, kmsKey.Arn, secrets.Arn, jobRole.Name, executeRole.Name).ApplyT(
@@ -508,15 +521,10 @@ func main() {
 						},
 					},
 				}, nil)
-
-				//
-				// Job role access
-				//
-
 				jobPolicy, err := iam.NewPolicy(ctx, "job-resource-policy", &iam.PolicyArgs{
 					Path:        pulumi.String("/"),
 					Name:        pulumi.String(fmt.Sprintf("%s-%s-job", ctx.Project(), ctx.Stack())),
-					Description: pulumi.String("S3 Access"),
+					Description: pulumi.String("S3 and KMS Access"),
 					Policy:      pulumi.String(jobsPolicyData.Json),
 				})
 				if err != nil {
@@ -551,7 +559,7 @@ func main() {
 				executePolicy, err := iam.NewPolicy(ctx, "execute-resource-policy", &iam.PolicyArgs{
 					Path:        pulumi.String("/"),
 					Name:        pulumi.String(fmt.Sprintf("%s-%s-execute", ctx.Project(), ctx.Stack())),
-					Description: pulumi.String("Secrets Manager Access"),
+					Description: pulumi.String("Secrets Manager and KMS Access"),
 					Policy:      pulumi.String(executePolicyData.Json),
 				})
 				if err != nil {
@@ -568,10 +576,57 @@ func main() {
 				return nil
 			})
 
-		ctx.Export("Docker Repo Url", dockerRepo.RepositoryUrl)
-		ctx.Export("config Bucket", configBucket.Bucket)
-		ctx.Export("creds Bucket", credsBucket.Bucket)
+		//
+		// Create pipeline policy and user for pushing docker image
+		//
 
+		pulumi.All(dockerRepo.Arn).ApplyT(
+			func(args []interface{}) *pulumi.Output {
+				repoArn := args[0].(string)
+				userPolicyData, _ := iam.GetPolicyDocument(ctx, &iam.GetPolicyDocumentArgs{
+					Statements: []iam.GetPolicyDocumentStatement{
+						{
+							Actions: []string{
+								"ecr:CompleteLayerUpload",
+								"ecr:UploadLayerPart",
+								"ecr:InitiateLayerUpload",
+								"ecr:BatchCheckLayerAvailability",
+								"ecr:PutImage",
+							},
+							Resources: []string{
+								repoArn,
+							},
+						},
+						{
+							Actions: []string{
+								"ecr:GetAuthorizationToken",
+							},
+							Resources: []string{
+								"*",
+							},
+						},
+					},
+				}, nil)
+				user, err := iam.NewUser(ctx, "repo-pusher", &iam.UserArgs{
+					Path: pulumi.String("/"),
+					Name: pulumi.String(fmt.Sprintf("%s-%s-repo", ctx.Project(), ctx.Stack())),
+				})
+				if err != nil {
+					log.Fatal(err)
+				}
+				_, err = iam.NewUserPolicy(ctx, "repo-pusher-policy", &iam.UserPolicyArgs{
+					User:   user.Name,
+					Policy: pulumi.String(userPolicyData.Json),
+				})
+				if err != nil {
+					log.Fatal(err)
+				}
+				return nil
+			})
+
+		ctx.Export("Docker Repo Url", dockerRepo.RepositoryUrl)
+		ctx.Export("Config Bucket", configBucket.Bucket)
+		ctx.Export("Creds Bucket", credsBucket.Bucket)
 		return nil
 	})
 }
