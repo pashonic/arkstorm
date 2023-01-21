@@ -4,7 +4,7 @@ on:
     branches: [ release ]
 jobs:
   build:
-    name: Build Image
+    name: Build and Push Image
     runs-on: ubuntu-latest
     steps:
     - name: Check out code
