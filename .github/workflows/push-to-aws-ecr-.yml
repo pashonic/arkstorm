@@ -24,5 +24,12 @@ jobs:
         ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY }}
         IMAGE_TAG: latest
       run: |
+        echo "BUGBUG"
+        echo $ECR_REGISTRY
+        echo "BUGBUG"
+        echo $ECR_REPOSITORY
+        echo "BUGBUG"
+        echo $IMAGE_TAG
+        echo "BUGBUG"
         docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
         docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
