@@ -46,8 +46,7 @@ type WeatherBellView struct {
 	Cyclehours     []int
 }
 
-func Download(weatherbell *Weatherbell, targetDir string) map[string]string {
-	views := make(map[string]string)
+func Download(weatherbell *Weatherbell, targetDir string) {
 
 	// Get session ID
 	sessionId := os.Getenv(env_sessionid_name)
@@ -70,9 +69,7 @@ func Download(weatherbell *Weatherbell, targetDir string) map[string]string {
 		// Download Images
 		targetDir := filepath.Join(targetDir, viewName)
 		downloadImageSet(imageUrlList, view.Label_timezone, targetDir)
-		views[viewName] = targetDir
 	}
-	return views
 }
 
 func getSessionId() string {
