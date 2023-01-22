@@ -48,6 +48,11 @@ type WeatherBellView struct {
 
 func Download(weatherbell *Weatherbell, targetDir string) {
 
+	// Return if empty views
+	if len(weatherbell.Views) < 1 {
+		return
+	}
+
 	// Get session ID
 	sessionId := os.Getenv(env_sessionid_name)
 	if sessionId == "" {

@@ -22,11 +22,13 @@ cyclehours=[0,12]
 filename = "Washington-Temp-Wind"
 imagesPerSecond = "2"
 
-[videos.watempwind.views.wa2mtemp]
+[[videos.watempwind.clips]]
+view = "wa2mtemp"
 title = "2M Temprature"
 speed = "1"
 
-[videos.watempwind.views.wagusts]
+[[videos.watempwind.clips]]
+view = "wagusts"
 title = "10M Wind Gust"
 speed = "1"
 

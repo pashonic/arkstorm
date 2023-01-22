@@ -44,8 +44,8 @@ func main() {
 	// Download weatherbell assets
 	weatherbell.Download(&conf.Providers.Weatherbell, default_assets_dir)
 
-	// Make videos from created views
-	videoContent := videobuilder.CreateVideos(conf.Videos, default_assets_dir, default_output_videos_dir)
+	// Make videos from asset views
+	videoContent := videobuilder.BuildVideos(conf.Videos, default_assets_dir, default_output_videos_dir)
 
 	// Upload videos
 	videouploader.UploadVideos(&conf.Youtube, videoContent)
