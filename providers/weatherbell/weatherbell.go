@@ -33,6 +33,11 @@ const (
 	default_font_file  = "fonts/Yagora.ttf"
 )
 
+type frame struct {
+	url       string
+	timeStamp time.Time
+}
+
 type Weatherbell struct {
 	Views map[string]WeatherBellView
 }
@@ -68,12 +73,12 @@ func Download(weatherbell *Weatherbell, targetDir string) {
 		// Find latest cycle time
 		selectedCycleTime := view.selectCycleTime(cycleList)
 
-		// Get image list
-		imageUrlList := view.getImageUrlList(sessionId, selectedCycleTime)
+		// Get frame list
+		imageList := view.getFrameList(sessionId, selectedCycleTime)
 
-		// Download Images
+		// Download frames
 		targetDir := filepath.Join(targetDir, viewName)
-		downloadImageSet(imageUrlList, view.Label_timezone, targetDir)
+		downloadFrameSet(imageList, view.Label_timezone, targetDir)
 	}
 }
 
@@ -116,8 +121,8 @@ func getSessionId() string {
 	return match[1]
 }
 
-func downloadImageSet(imageUrlList []string, timeZone string, targetDir string) {
-	for index, imageUrl := range imageUrlList {
+func downloadFrameSet(frameList []frame, timeZone string, targetDir string) {
+	for index, frame := range frameList {
 
 		// Create and verify directory path
 		err := os.MkdirAll(targetDir, os.ModePerm)
@@ -127,43 +132,33 @@ func downloadImageSet(imageUrlList []string, timeZone string, targetDir string) 
 
 		// Send request
 		client := http.Client{}
-		res, err := client.Get(imageUrl)
+		res, err := client.Get(frame.url)
 		if err != nil {
 			log.Fatalln(err)
 		}
 
-		// Read image from body.
+		// Read frame from body.
 		body, err := ioutil.ReadAll(res.Body)
 		img, _, err := image.Decode(bytes.NewReader(body))
 		if err != nil {
 			log.Fatalln(err)
 		}
 
-		// Get timestamp from image url
-		timeStampRegex := regexp.MustCompile(`(\d+)-\w+\.png`)
-		timestampString := timeStampRegex.FindStringSubmatch(imageUrl)[1]
-
-		// Convert timestamp to time object
-		timeStampString := regexp.MustCompile(`\.\w+$`).ReplaceAllString(timestampString, "")
-		intVar, err := strconv.ParseInt(timeStampString, 10, 64)
-		if err != nil {
-			log.Fatalln(err)
-		}
-		viewTime := time.Unix(intVar, 0)
+		// Process timestamp
 		location, err := time.LoadLocation(timeZone)
 		if err != nil {
 			log.Fatalln(err)
 		}
-		viewTime = viewTime.In(location)
+		viewTime := frame.timeStamp.In(location)
 		dateTimeString := viewTime.Format("Mon, 2 Jan 15:04 PM MST")
 
-		// Draw date/time label to image
+		// Draw date/time label to frame
 		bounds := img.Bounds()
 		imgRGBA := image.NewRGBA(image.Rect(0, 0, bounds.Dx(), bounds.Dy()))
 		draw.Draw(imgRGBA, imgRGBA.Bounds(), img, bounds.Min, draw.Src)
 		addLabel(imgRGBA, 420, 25, dateTimeString) // Future version: make this configurable
 
-		// Write final image to file
+		// Write final frame to file
 		localTargetPath := filepath.Join(targetDir, fmt.Sprintf("%03d.png", index))
 		fmt.Println("Saving File: ", localTargetPath)
 		out, _ := os.Create(localTargetPath)
@@ -206,7 +201,7 @@ func addLabel(img *image.RGBA, x, y int, label string) {
 	d.DrawString(label)
 }
 
-func (view *WeatherBellView) getImageUrlList(sessionId string, cycleTime string) []string {
+func (view *WeatherBellView) getFrameList(sessionId string, cycleTime string) []frame {
 
 	// Prepare request
 	payload := strings.NewReader(fmt.Sprintf(`{"action":"forecast","type":"%s","product":"%s","domain":"%s","param":"%s","init":"%s"}`, view.Viewtype, view.Product, view.Region, view.Parameter, cycleTime))
@@ -229,18 +224,35 @@ func (view *WeatherBellView) getImageUrlList(sessionId string, cycleTime string)
 	if err != nil {
 		log.Fatal(err)
 	}
-	var imageList []string
-	json.Unmarshal([]byte(body), &imageList)
+
+	var frameList []string
+	json.Unmarshal([]byte(body), &frameList)
 	if err != nil {
 		log.Fatal(err)
 	}
 	res.Body.Close()
 
 	// Convert to URL list and return
-	for index, imageName := range imageList {
-		imageList[index] = fmt.Sprintf("%s/%s/%s/%s/%s/%s/%s.png", image_stroage_url, view.Viewtype, view.Product, view.Region, view.Parameter, cycleTime, imageName)
+	var frameListReturn []frame
+	for _, frameName := range frameList {
+
+		// Create frame url
+		url := fmt.Sprintf("%s/%s/%s/%s/%s/%s/%s.png", image_stroage_url, view.Viewtype, view.Product, view.Region, view.Parameter, cycleTime, frameName)
+
+		// Get and convert timestamp
+		timeStampRegex := regexp.MustCompile(`(\d+)-\w+`)
+		timestampString := timeStampRegex.FindStringSubmatch(frameName)[1]
+		intVar, err := strconv.ParseInt(timestampString, 10, 64)
+		if err != nil {
+			log.Fatalln(err)
+		}
+		viewTime := time.Unix(intVar, 0)
+		frameItem := frame{url: url, timeStamp: viewTime}
+
+		// Store object
+		frameListReturn = append(frameListReturn, frameItem)
 	}
-	return imageList
+	return frameListReturn
 }
 
 func (view *WeatherBellView) getCycleList(sessionId string) []string {
