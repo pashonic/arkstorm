@@ -1,5 +1,6 @@
 build:
 	go build -o bin/arkstorm main.go
+	cp -r fonts bin/
 
 run:
 	go run main.go "$(config)"
