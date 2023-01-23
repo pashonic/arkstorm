@@ -48,6 +48,7 @@ type WeatherBellView struct {
 	Region         string
 	Parameter      string
 	Label_timezone string
+	Timespanhours  int
 	Cyclehours     []int
 }
 
@@ -74,7 +75,7 @@ func Download(weatherbell *Weatherbell, targetDir string) {
 		selectedCycleTime := view.selectCycleTime(cycleList)
 
 		// Get frame list
-		imageList := view.getFrameList(sessionId, selectedCycleTime)
+		imageList := view.getFrameList(sessionId, selectedCycleTime, view.Timespanhours)
 
 		// Download frames
 		targetDir := filepath.Join(targetDir, viewName)
@@ -150,7 +151,7 @@ func downloadFrameSet(frameList []frame, timeZone string, targetDir string) {
 			log.Fatalln(err)
 		}
 		viewTime := frame.timeStamp.In(location)
-		dateTimeString := viewTime.Format("Mon, 2 Jan 15:04 PM MST")
+		dateTimeString := viewTime.Format("Mon, 2 Jan 3:04 PM MST")
 
 		// Draw date/time label to frame
 		bounds := img.Bounds()
@@ -201,10 +202,10 @@ func addLabel(img *image.RGBA, x, y int, label string) {
 	d.DrawString(label)
 }
 
-func (view *WeatherBellView) getFrameList(sessionId string, cycleTime string) []frame {
+func (view *WeatherBellView) getFrameList(sessionId string, cycleTimeString string, timeSpanHours int) []frame {
 
 	// Prepare request
-	payload := strings.NewReader(fmt.Sprintf(`{"action":"forecast","type":"%s","product":"%s","domain":"%s","param":"%s","init":"%s"}`, view.Viewtype, view.Product, view.Region, view.Parameter, cycleTime))
+	payload := strings.NewReader(fmt.Sprintf(`{"action":"forecast","type":"%s","product":"%s","domain":"%s","param":"%s","init":"%s"}`, view.Viewtype, view.Product, view.Region, view.Parameter, cycleTimeString))
 	req, err := http.NewRequest("POST", api_image_url, payload)
 	if err != nil {
 		log.Fatal(err)
@@ -232,12 +233,19 @@ func (view *WeatherBellView) getFrameList(sessionId string, cycleTime string) []
 	}
 	res.Body.Close()
 
+	intVar, err := strconv.ParseInt(cycleTimeString, 10, 64)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	cycleTime := time.Unix(intVar, 0)
+	maxTimeSpan := cycleTime.Add(time.Duration(timeSpanHours) * time.Hour)
+
 	// Convert to URL list and return
 	var frameListReturn []frame
 	for _, frameName := range frameList {
 
 		// Create frame url
-		url := fmt.Sprintf("%s/%s/%s/%s/%s/%s/%s.png", image_stroage_url, view.Viewtype, view.Product, view.Region, view.Parameter, cycleTime, frameName)
+		url := fmt.Sprintf("%s/%s/%s/%s/%s/%s/%s.png", image_stroage_url, view.Viewtype, view.Product, view.Region, view.Parameter, cycleTimeString, frameName)
 
 		// Get and convert timestamp
 		timeStampRegex := regexp.MustCompile(`(\d+)-\w+`)
@@ -247,9 +255,14 @@ func (view *WeatherBellView) getFrameList(sessionId string, cycleTime string) []
 			log.Fatalln(err)
 		}
 		viewTime := time.Unix(intVar, 0)
-		frameItem := frame{url: url, timeStamp: viewTime}
+
+		// If max time/data is less than view, stop adding to list
+		if maxTimeSpan.Before(viewTime) {
+			break
+		}
 
 		// Store object
+		frameItem := frame{url: url, timeStamp: viewTime}
 		frameListReturn = append(frameListReturn, frameItem)
 	}
 	return frameListReturn

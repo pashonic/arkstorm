@@ -1,6 +1,7 @@
 [providers]
 
 [providers.weatherbell.views.wa2mtemp]
+timespanhours=36
 viewtype="model"
 product="ecmwf-deterministic"
 region="washington"
@@ -9,6 +10,7 @@ label_timezone="America/Los_Angeles"
 cyclehours=[0,12]
 
 [providers.weatherbell.views.wagusts]
+timespanhours=36
 viewtype="model"
 product="ecmwf-deterministic"
 region="washington"
