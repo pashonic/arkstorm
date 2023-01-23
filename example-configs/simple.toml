@@ -6,7 +6,8 @@ viewtype="model"
 product="ecmwf-deterministic"
 region="washington"
 parameter="t2m_f"
-label_timezone="America/Los_Angeles"
+time_label_cords = { x = 420, y = 25 }
+time_label_timezone="America/New_York"
 cyclehours=[0,12]
 
 [providers.weatherbell.views.wagusts]
@@ -15,7 +16,8 @@ viewtype="model"
 product="ecmwf-deterministic"
 region="washington"
 parameter="gust_mph"
-label_timezone="America/New_York"
+time_label_cords = { x = 420, y = 25 }
+time_label_timezone="America/New_York"
 cyclehours=[0,12]
 
 [providers.weatherbell.views.seatacensqpf]
@@ -23,7 +25,6 @@ viewtype="meteogram"
 product="ecmwf-ensemble"
 region="KSEA"
 parameter="indiv_qpf_24"
-label_timezone="America/New_York"
 cyclehours=[0,12]
 
 [videos]

@@ -43,13 +43,17 @@ type Weatherbell struct {
 }
 
 type WeatherBellView struct {
-	Viewtype       string
-	Product        string
-	Region         string
-	Parameter      string
-	Label_timezone string
-	Timespanhours  int
-	Cyclehours     []int
+	Viewtype            string
+	Product             string
+	Region              string
+	Parameter           string
+	Time_label_timezone string
+	Time_label_cords    struct {
+		X int
+		Y int
+	}
+	Timespanhours int
+	Cyclehours    []int
 }
 
 func Download(weatherbell *Weatherbell, targetDir string) {
@@ -79,7 +83,7 @@ func Download(weatherbell *Weatherbell, targetDir string) {
 
 		// Download frames
 		targetDir := filepath.Join(targetDir, viewName)
-		downloadFrameSet(imageList, view.Label_timezone, targetDir)
+		downloadFrameSet(imageList, view, targetDir)
 	}
 }
 
@@ -122,7 +126,7 @@ func getSessionId() string {
 	return match[1]
 }
 
-func downloadFrameSet(frameList []frame, timeZone string, targetDir string) {
+func downloadFrameSet(frameList []frame, view WeatherBellView, targetDir string) {
 	for index, frame := range frameList {
 
 		// Create and verify directory path
@@ -144,20 +148,20 @@ func downloadFrameSet(frameList []frame, timeZone string, targetDir string) {
 		if err != nil {
 			log.Fatalln(err)
 		}
-
-		// Process timestamp
-		location, err := time.LoadLocation(timeZone)
-		if err != nil {
-			log.Fatalln(err)
-		}
-		viewTime := frame.timeStamp.In(location)
-		dateTimeString := viewTime.Format("Mon, 2 Jan 3:04 PM MST")
-
-		// Draw date/time label to frame
 		bounds := img.Bounds()
 		imgRGBA := image.NewRGBA(image.Rect(0, 0, bounds.Dx(), bounds.Dy()))
 		draw.Draw(imgRGBA, imgRGBA.Bounds(), img, bounds.Min, draw.Src)
-		addLabel(imgRGBA, 420, 25, dateTimeString) // Future version: make this configurable
+
+		// Draw date/time label to frame if specified
+		if view.Time_label_cords.X > 0 && view.Time_label_cords.Y > 0 {
+			location, err := time.LoadLocation(view.Time_label_timezone)
+			if err != nil {
+				log.Fatalln(err)
+			}
+			viewTime := frame.timeStamp.In(location)
+			dateTimeString := viewTime.Format("Mon, 2 Jan 3:04 PM MST")
+			addLabel(imgRGBA, view.Time_label_cords.X, view.Time_label_cords.Y, dateTimeString)
+		}
 
 		// Write final frame to file
 		localTargetPath := filepath.Join(targetDir, fmt.Sprintf("%03d.png", index))
