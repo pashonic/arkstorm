@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strconv"
 
 	ffmpeg "github.com/u2takey/ffmpeg-go"
 )
@@ -13,12 +14,12 @@ type clip struct {
 	View  string
 	Title string
 	Speed string
+	Time  string
 }
 
 type Video struct {
-	Filename        string
-	ImagesPerSecond string
-	Clips           []clip
+	Filename string
+	Clips    []clip
 }
 
 func BuildVideos(videos map[string]Video, assetDir string, outputDir string) map[string]string {
@@ -45,7 +46,15 @@ func build(video *Video, assetDir string, outputFilePath string) {
 	var streamInputs []*ffmpeg.Stream
 	for _, clip := range video.Clips {
 		sourcePath := filepath.Join(assetDir, clip.View, "%03d.png")
-		streamInput := ffmpeg.Input(sourcePath, ffmpeg.KwArgs{"r": video.ImagesPerSecond}).Filter("setpts", ffmpeg.Args{fmt.Sprintf("%v*PTS", clip.Speed)})
+		loopIntValue, err := strconv.ParseInt(clip.Time, 10, 64)
+		if err != nil {
+			log.Fatalln(err)
+		}
+		loop := "0"
+		if loopIntValue > 0 {
+			loop = "1"
+		}
+		streamInput := ffmpeg.Input(sourcePath, ffmpeg.KwArgs{"loop": loop, "t": clip.Time}).Filter("setpts", ffmpeg.Args{fmt.Sprintf("%v*PTS", clip.Speed)})
 		streamInputs = append(streamInputs, streamInput)
 	}
 

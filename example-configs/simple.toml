@@ -1,7 +1,7 @@
-[providers]
+# [providers]
 
 [providers.weatherbell.views.wa2mtemp]
-timespanhours=36
+timespanhours=48
 viewtype="model"
 product="ecmwf-deterministic"
 region="washington"
@@ -10,7 +10,7 @@ label_timezone="America/Los_Angeles"
 cyclehours=[0,12]
 
 [providers.weatherbell.views.wagusts]
-timespanhours=36
+timespanhours=48
 viewtype="model"
 product="ecmwf-deterministic"
 region="washington"
@@ -18,21 +18,36 @@ parameter="gust_mph"
 label_timezone="America/New_York"
 cyclehours=[0,12]
 
+[providers.weatherbell.views.seatacensqpf]
+viewtype="meteogram"
+product="ecmwf-ensemble"
+region="KSEA"
+parameter="indiv_qpf_24"
+label_timezone="America/New_York"
+cyclehours=[0,12]
+
 [videos]
 
 [videos.watempwind]
 filename = "Washington-Temp-Wind"
-imagesPerSecond = "2"
+
+[[videos.watempwind.clips]]
+view = "seatacensqpf"
+title = "Seatac Ensemble 24 Hour QPF"
+speed = "1"
+time = "10"
 
 [[videos.watempwind.clips]]
 view = "wa2mtemp"
 title = "2M Temprature"
-speed = "1"
+speed = "5"
+time = "0"
 
 [[videos.watempwind.clips]]
 view = "wagusts"
 title = "10M Wind Gust"
-speed = "1"
+speed = "5"
+time = "0"
 
 # [youtube.videos.watempwind]
 # title = "Washington ECMWF"

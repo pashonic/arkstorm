@@ -225,7 +225,6 @@ func (view *WeatherBellView) getFrameList(sessionId string, cycleTimeString stri
 	if err != nil {
 		log.Fatal(err)
 	}
-
 	var frameList []string
 	json.Unmarshal([]byte(body), &frameList)
 	if err != nil {
@@ -233,6 +232,7 @@ func (view *WeatherBellView) getFrameList(sessionId string, cycleTimeString stri
 	}
 	res.Body.Close()
 
+	// Caclulate max time span
 	intVar, err := strconv.ParseInt(cycleTimeString, 10, 64)
 	if err != nil {
 		log.Fatalln(err)
@@ -257,7 +257,7 @@ func (view *WeatherBellView) getFrameList(sessionId string, cycleTimeString stri
 		viewTime := time.Unix(intVar, 0)
 
 		// If max time/data is less than view, stop adding to list
-		if maxTimeSpan.Before(viewTime) {
+		if timeSpanHours > 0 && maxTimeSpan.Before(viewTime) {
 			break
 		}
 
