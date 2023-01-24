@@ -11,10 +11,16 @@ import (
 )
 
 type clip struct {
-	View  string
-	Title string
-	Speed string
-	Time  string
+	View        string
+	Title       string
+	Title_cords struct {
+		X int
+		Y int
+	}
+	Title_color string
+	Title_size  int
+	Speed       string
+	Time        string
 }
 
 type Video struct {
@@ -54,7 +60,18 @@ func build(video *Video, assetDir string, outputFilePath string) {
 		if loopIntValue > 0 {
 			loop = "1"
 		}
+
 		streamInput := ffmpeg.Input(sourcePath, ffmpeg.KwArgs{"loop": loop, "t": clip.Time}).Filter("setpts", ffmpeg.Args{fmt.Sprintf("%v*PTS", clip.Speed)})
+		if len(clip.Title) > 0 {
+			titleArgs := ffmpeg.Args{
+				fmt.Sprintf("text='%v'", clip.Title),
+				fmt.Sprintf("x=%v", clip.Title_cords.X),
+				fmt.Sprintf("y=%v", clip.Title_cords.Y),
+				fmt.Sprintf("fontsize=%v", clip.Title_size),
+				fmt.Sprintf("fontcolor=%v", clip.Title_color),
+			}
+			streamInput = streamInput.Filter("drawtext", titleArgs)
+		}
 		streamInputs = append(streamInputs, streamInput)
 	}
 
