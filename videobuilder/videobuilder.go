@@ -9,17 +9,21 @@ import (
 	ffmpeg "github.com/u2takey/ffmpeg-go"
 )
 
-type clip struct {
-	View        string
-	Title       string
-	Title_cords struct {
+type text struct {
+	Text  string
+	Cords struct {
 		X int
 		Y int
 	}
-	Title_color string
-	Title_size  int
-	Speed       string
-	Time        string
+	Color string
+	Size  int
+}
+
+type clip struct {
+	View  string
+	Texts []text
+	Speed string
+	Time  string
 }
 
 type Video struct {
@@ -65,13 +69,13 @@ func build(video *Video, assetDir string, outputFilePath string) error {
 		streamInput := ffmpeg.Input(sourcePath, ffmpeg.KwArgs{"loop": loop, "t": clip.Time}).Filter("setpts", ffmpeg.Args{fmt.Sprintf("%v*PTS", clip.Speed)})
 
 		// Apply title if specified
-		if len(clip.Title) > 0 {
+		for _, text := range clip.Texts {
 			titleArgs := ffmpeg.Args{
-				fmt.Sprintf("text='%v'", clip.Title),
-				fmt.Sprintf("x=%v", clip.Title_cords.X),
-				fmt.Sprintf("y=%v", clip.Title_cords.Y),
-				fmt.Sprintf("fontsize=%v", clip.Title_size),
-				fmt.Sprintf("fontcolor=%v", clip.Title_color),
+				fmt.Sprintf("text='%v'", text.Text),
+				fmt.Sprintf("x=%v", text.Cords.X),
+				fmt.Sprintf("y=%v", text.Cords.Y),
+				fmt.Sprintf("fontsize=%v", text.Size),
+				fmt.Sprintf("fontcolor=%v", text.Color),
 			}
 			streamInput = streamInput.Filter("drawtext", titleArgs)
 		}

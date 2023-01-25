@@ -13,8 +13,8 @@
             "args": ["example-configs/simple.toml"],
             "env": {
                 "WEATHERBELL_SESSIONID": "",
-                "WEATHERBELL_USERNAME": "pashonic",
-                "WEATHERBELL_PASSWORD": "bakertonto"
+                "WEATHERBELL_USERNAME": "",
+                "WEATHERBELL_PASSWORD": ""
             }
         }
     ]

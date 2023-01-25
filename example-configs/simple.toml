@@ -34,30 +34,36 @@ filename = "Washington-Temp-Wind"
 
 [[videos.watempwind.clips]]
 view = "seatacensqpf"
-title = "Seatac Ensemble 24 Hour Precep"
-title_cords = { x = 500, y = 24 }
-title_color = "red"
-title_size = 22
 speed = "1"
 time = "10"
 
+[[videos.watempwind.clips.texts]]
+text = "Seatac Ensemble 24 Hour Precep"
+cords = { x = 500, y = 24 }
+color = "red"
+size = 22
+
 [[videos.watempwind.clips]]
 view = "wa2mtemp"
-title = "WA Wind\nGust"
-title_cords = { x = 715, y = 765 }
-title_color = "red"
-title_size = 20
 speed = "5"
 time = "0"
 
+[[videos.watempwind.clips.texts]]
+text = "WA Wind\nGust"
+cords = { x = 715, y = 765 }
+color = "red"
+size = 20
+
 [[videos.watempwind.clips]]
 view = "wagusts"
-title = "WA 2m Temp"
-title_cords = { x = 710, y = 775 }
-title_color = "red"
-title_size = 20
 speed = "5"
 time = "0"
+
+[[videos.watempwind.clips.texts]]
+text = "WA 2m Temp"
+cords = { x = 710, y = 775 }
+color = "red"
+size = 20
 
 # [youtube.videos.watempwind]
 # title = "Washington ECMWF"
