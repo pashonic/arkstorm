@@ -66,7 +66,7 @@ func build(video *Video, assetDir string, outputFilePath string) error {
 		// Process speed settings
 		streamInput := ffmpeg.Input(sourcePath, ffmpeg.KwArgs{"loop": loop, "t": clip.Time}).Filter("setpts", ffmpeg.Args{fmt.Sprintf("%v*PTS", clip.Speed)})
 
-		// Apply title it specified
+		// Apply title if specified
 		if len(clip.Title) > 0 {
 			titleArgs := ffmpeg.Args{
 				fmt.Sprintf("text='%v'", clip.Title),
