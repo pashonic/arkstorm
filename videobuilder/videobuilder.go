@@ -30,8 +30,7 @@ type Video struct {
 func BuildVideos(videos map[string]Video, assetDir string, outputDir string) (map[string]string, error) {
 
 	// Make sure output directory exists
-	err := os.MkdirAll(outputDir, os.ModePerm)
-	if err != nil {
+	if err := os.MkdirAll(outputDir, os.ModePerm); err != nil {
 		return nil, err
 	}
 
@@ -39,8 +38,7 @@ func BuildVideos(videos map[string]Video, assetDir string, outputDir string) (ma
 	videoContent := make(map[string]string)
 	for videoId, video := range videos {
 		outputFilePath := filepath.Join(outputDir, video.Filename+".mp4")
-		err := build(&video, assetDir, outputFilePath)
-		if err != nil {
+		if err := build(&video, assetDir, outputFilePath); err != nil {
 			return nil, err
 		}
 		videoContent[videoId] = outputFilePath
@@ -81,6 +79,5 @@ func build(video *Video, assetDir string, outputFilePath string) error {
 	}
 
 	// Build video
-	err := ffmpeg.Concat(streamInputs).Output(outputFilePath).OverWriteOutput().Run()
-	return err
+	return ffmpeg.Concat(streamInputs).Output(outputFilePath).OverWriteOutput().Run()
 }

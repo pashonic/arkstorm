@@ -3,6 +3,7 @@ package weatherbell
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"image"
 	"image/color"
@@ -56,38 +57,54 @@ type WeatherBellView struct {
 	Cyclehours    []int
 }
 
-func Download(weatherbell *Weatherbell, targetDir string) {
+func Download(weatherbell *Weatherbell, targetDir string) error {
 
 	// Return if empty views
 	if len(weatherbell.Views) < 1 {
-		return
+		return nil
 	}
 
 	// Get session ID
-	sessionId := os.Getenv(env_sessionid_name)
-	if sessionId == "" {
-		sessionId = getSessionId()
+	sessionId, err := getSessionId()
+	if err != nil {
+		return err
 	}
 
 	// Process views
 	for viewName, view := range weatherbell.Views {
 
 		// Get cycle list from site
-		cycleList := view.getCycleList(sessionId)
+		cycleList, err := view.getCycleList(sessionId)
+		if err != nil {
+			return err
+		}
 
 		// Find latest cycle time
-		selectedCycleTime := view.selectCycleTime(cycleList)
+		selectedCycleTime, err := view.selectCycleTime(cycleList)
+		if err != nil {
+			return err
+		}
 
 		// Get frame list
-		imageList := view.getFrameList(sessionId, selectedCycleTime, view.Timespanhours)
+		imageList, err := view.getFrameList(sessionId, selectedCycleTime, view.Timespanhours)
+		if err != nil {
+			return err
+		}
 
 		// Download frames
-		targetDir := filepath.Join(targetDir, viewName)
-		downloadFrameSet(imageList, view, targetDir)
+		if err := downloadFrameSet(imageList, view, filepath.Join(targetDir, viewName)); err != nil {
+			return err
+		}
 	}
+	return nil
 }
 
-func getSessionId() string {
+func getSessionId() (string, error) {
+
+	// Return environment var if provided
+	if os.Getenv(env_sessionid_name) != "" {
+		return os.Getenv(env_sessionid_name), nil
+	}
 
 	// Get Credentials from environment variable
 	username := os.Getenv(env_username_name)
@@ -97,7 +114,7 @@ func getSessionId() string {
 	loginPayload := strings.NewReader(fmt.Sprintf("username=%s&password=%s&remember_me=1&do_login=Login", username, password))
 	req, err := http.NewRequest("POST", login_url, loginPayload)
 	if err != nil {
-		log.Fatal(err)
+		return "nil", err
 	}
 	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 
@@ -105,48 +122,50 @@ func getSessionId() string {
 	client := &http.Client{}
 	res, err := client.Do(req)
 	if err != nil {
-		log.Fatalln(err)
+		return "nil", err
 	}
 
 	// Process request
 	regex, err := regexp.Compile(`PHPSESSID=(\w+)`)
 	if err != nil {
-		log.Fatalln(err)
+		return "nil", err
 	}
 	setCookies := res.Header.Values("Set-Cookie")
 	if len(setCookies) < 2 {
-		log.Fatalln("Unable get to session ID, likely invalid credentials")
+		return "", errors.New("Unable get to session ID, likely invalid credentials")
 	}
 	match := regex.FindStringSubmatch(setCookies[0])
 	if match == nil {
-		log.Fatal("Could not get session ID")
+		return "", errors.New("Unable get to session ID")
 	}
 	res.Body.Close()
-	fmt.Println("Session ID: " + match[1])
-	return match[1]
+	log.Println("Session ID: " + match[1])
+	return match[1], nil
 }
 
-func downloadFrameSet(frameList []frame, view WeatherBellView, targetDir string) {
+func downloadFrameSet(frameList []frame, view WeatherBellView, targetDir string) error {
 	for index, frame := range frameList {
 
 		// Create and verify directory path
-		err := os.MkdirAll(targetDir, os.ModePerm)
-		if err != nil {
-			log.Fatalln(err)
+		if err := os.MkdirAll(targetDir, os.ModePerm); err != nil {
+			return err
 		}
 
 		// Send request
 		client := http.Client{}
 		res, err := client.Get(frame.url)
 		if err != nil {
-			log.Fatalln(err)
+			return err
 		}
 
 		// Read frame from body.
 		body, err := ioutil.ReadAll(res.Body)
+		if err != nil {
+			return err
+		}
 		img, _, err := image.Decode(bytes.NewReader(body))
 		if err != nil {
-			log.Fatalln(err)
+			return err
 		}
 		bounds := img.Bounds()
 		imgRGBA := image.NewRGBA(image.Rect(0, 0, bounds.Dx(), bounds.Dy()))
@@ -156,34 +175,41 @@ func downloadFrameSet(frameList []frame, view WeatherBellView, targetDir string)
 		if view.Time_label_cords.X > 0 && view.Time_label_cords.Y > 0 {
 			location, err := time.LoadLocation(view.Time_label_timezone)
 			if err != nil {
-				log.Fatalln(err)
+				return err
 			}
 			viewTime := frame.timeStamp.In(location)
 			dateTimeString := viewTime.Format("Mon, 2 Jan 3:04 PM MST")
-			addLabel(imgRGBA, view.Time_label_cords.X, view.Time_label_cords.Y, dateTimeString)
+			if err := addLabel(imgRGBA, view.Time_label_cords.X, view.Time_label_cords.Y, dateTimeString); err != nil {
+				return err
+			}
 		}
 
 		// Write final frame to file
 		localTargetPath := filepath.Join(targetDir, fmt.Sprintf("%03d.png", index))
-		fmt.Println("Saving File: ", localTargetPath)
-		out, _ := os.Create(localTargetPath)
-		err = png.Encode(out, imgRGBA)
+		log.Println("Saving File: ", localTargetPath)
+		out, err := os.Create(localTargetPath)
 		if err != nil {
-			log.Fatalln(err)
+			return err
 		}
-		out.Close()
+		if err = png.Encode(out, imgRGBA); err != nil {
+			return err
+		}
+		if err := out.Close(); err != nil {
+			return err
+		}
 	}
+	return nil
 }
-func addLabel(img *image.RGBA, x, y int, label string) {
+func addLabel(img *image.RGBA, x, y int, label string) error {
 
 	// Load font
 	fontFile, err := ioutil.ReadFile(default_font_file)
 	if err != nil {
-		log.Fatalln(err)
+		return err
 	}
 	ttf, err := truetype.Parse(fontFile)
 	if err != nil {
-		log.Fatalln(err)
+		return err
 	}
 
 	// Configure text
@@ -204,15 +230,16 @@ func addLabel(img *image.RGBA, x, y int, label string) {
 		Dot:  point,
 	}
 	d.DrawString(label)
+	return nil
 }
 
-func (view *WeatherBellView) getFrameList(sessionId string, cycleTimeString string, timeSpanHours int) []frame {
+func (view *WeatherBellView) getFrameList(sessionId string, cycleTimeString string, timeSpanHours int) ([]frame, error) {
 
 	// Prepare request
 	payload := strings.NewReader(fmt.Sprintf(`{"action":"forecast","type":"%s","product":"%s","domain":"%s","param":"%s","init":"%s"}`, view.Viewtype, view.Product, view.Region, view.Parameter, cycleTimeString))
 	req, err := http.NewRequest("POST", api_image_url, payload)
 	if err != nil {
-		log.Fatal(err)
+		return nil, nil
 	}
 	req.Header.Add("cookie", "PHPSESSID="+sessionId)
 	req.Header.Add("Content-Type", "application/json")
@@ -221,25 +248,25 @@ func (view *WeatherBellView) getFrameList(sessionId string, cycleTimeString stri
 	client := &http.Client{}
 	res, err := client.Do(req)
 	if err != nil {
-		log.Fatal(err)
+		return nil, nil
 	}
 
 	// Process request
 	body, err := ioutil.ReadAll(res.Body)
 	if err != nil {
-		log.Fatal(err)
+		return nil, nil
 	}
 	var frameList []string
 	json.Unmarshal([]byte(body), &frameList)
 	if err != nil {
-		log.Fatal(err)
+		return nil, nil
 	}
 	res.Body.Close()
 
 	// Caclulate max time span
 	intVar, err := strconv.ParseInt(cycleTimeString, 10, 64)
 	if err != nil {
-		log.Fatalln(err)
+		return nil, nil
 	}
 	cycleTime := time.Unix(intVar, 0)
 	maxTimeSpan := cycleTime.Add(time.Duration(timeSpanHours) * time.Hour)
@@ -256,7 +283,7 @@ func (view *WeatherBellView) getFrameList(sessionId string, cycleTimeString stri
 		timestampString := timeStampRegex.FindStringSubmatch(frameName)[1]
 		intVar, err := strconv.ParseInt(timestampString, 10, 64)
 		if err != nil {
-			log.Fatalln(err)
+			return nil, nil
 		}
 		viewTime := time.Unix(intVar, 0)
 
@@ -269,16 +296,16 @@ func (view *WeatherBellView) getFrameList(sessionId string, cycleTimeString stri
 		frameItem := frame{url: url, timeStamp: viewTime}
 		frameListReturn = append(frameListReturn, frameItem)
 	}
-	return frameListReturn
+	return frameListReturn, nil
 }
 
-func (view *WeatherBellView) getCycleList(sessionId string) []string {
+func (view *WeatherBellView) getCycleList(sessionId string) ([]string, error) {
 
 	// Prepare request
 	payload := strings.NewReader(fmt.Sprintf(`{"action":"init","type":"%s","product":"%s","domain":"%s","param":"%s"}`, view.Viewtype, view.Product, view.Region, view.Parameter))
 	req, err := http.NewRequest("POST", api_image_url, payload)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 	req.Header.Add("cookie", "PHPSESSID="+sessionId)
 	req.Header.Add("Content-Type", "application/json")
@@ -287,38 +314,39 @@ func (view *WeatherBellView) getCycleList(sessionId string) []string {
 	client := &http.Client{}
 	res, err := client.Do(req)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
 	// Process request
 	body, err := ioutil.ReadAll(res.Body)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 	var cycleList []string
 	json.Unmarshal([]byte(body), &cycleList)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
-	res.Body.Close()
-	return cycleList
+	if err := res.Body.Close(); err != nil {
+		return nil, err
+	}
+	return cycleList, nil
 }
 
-func (view *WeatherBellView) selectCycleTime(cycleList []string) string {
+func (view *WeatherBellView) selectCycleTime(cycleList []string) (string, error) {
 
 	// Find latest cycle time
 	for _, cycle := range cycleList {
 		cycleNum, err := strconv.ParseInt(cycle, 10, 64)
 		if err != nil {
-			log.Fatal(err)
+			return "", err
 		}
 		cycleHour := time.Unix(cycleNum, 0).UTC().Hour()
 		for _, givenHour := range view.Cyclehours {
 			if cycleHour == givenHour {
-				return cycle
+				return cycle, nil
 			}
 		}
 	}
-	log.Fatal("Unable to find matching cycle")
-	return ""
+	return "", errors.New("Unable to find matching cycle")
 }
