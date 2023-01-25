@@ -2,7 +2,6 @@ package videouploader
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
@@ -31,43 +30,51 @@ type Video struct {
 	CategoryId  string
 }
 
-func getTokenFromFile(tokenFilePath string) *oauth2.Token {
+func getTokenFromFile(tokenFilePath string) (*oauth2.Token, error) {
 	file, err := os.Open(tokenFilePath)
+	defer file.Close()
 	if err != nil {
 		log.Fatal(err)
 	}
 	token := &oauth2.Token{}
-	err = json.NewDecoder(file).Decode(token)
-	file.Close()
-	return token
-}
-
-func UploadVideos(videos *Videos, videoContent map[string]string) {
-	for videoId, video := range videos.Videos {
-		Upload(videoContent[videoId], &video)
+	if err := json.NewDecoder(file).Decode(token); err != nil {
+		return nil, err
 	}
+	return token, nil
 }
 
-func Upload(videoFilePath string, video *Video) {
+func UploadVideos(videos *Videos, videoContent map[string]string) error {
+	for videoId, video := range videos.Videos {
+		if err := Upload(videoContent[videoId], &video); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func Upload(videoFilePath string, video *Video) error {
 	ctx := context.Background()
 
 	// Get config using google client config secret file
 	byteData, err := ioutil.ReadFile(default_client_secret_file)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	config, err := google.ConfigFromJSON(byteData, youtube.YoutubeUploadScope)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	// Get Token file
-	token := getTokenFromFile(default_client_token_file)
+	token, err := getTokenFromFile(default_client_token_file)
+	if err != nil {
+		return err
+	}
 
 	// Initialize service
 	service, err := youtube.NewService(ctx, option.WithTokenSource(config.TokenSource(ctx, token)))
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	// Create upload parameter object
@@ -86,13 +93,14 @@ func Upload(videoFilePath string, video *Video) {
 	file, err := os.Open(videoFilePath)
 	defer file.Close()
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	// Upload video
 	response, err := call.Media(file).Do()
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
-	fmt.Printf("Upload successful! Video ID: %v\n", response.Id)
+	log.Printf("Upload successful! Video ID: %v\n", response.Id)
+	return nil
 }
