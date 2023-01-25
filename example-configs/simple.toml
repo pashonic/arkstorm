@@ -1,37 +1,72 @@
 [providers]
 
 [providers.weatherbell.views.wa2mtemp]
+timespanhours=48
 viewtype="model"
 product="ecmwf-deterministic"
 region="washington"
 parameter="t2m_f"
-label_timezone="America/Los_Angeles"
+time_label_cords = { x = 420, y = 25 }
+time_label_timezone="America/Los_Angeles"
 cyclehours=[0,12]
 
 [providers.weatherbell.views.wagusts]
+timespanhours=48
 viewtype="model"
 product="ecmwf-deterministic"
 region="washington"
 parameter="gust_mph"
-label_timezone="America/New_York"
+time_label_cords = { x = 420, y = 25 }
+time_label_timezone="America/Los_Angeles"
+cyclehours=[0,12]
+
+[providers.weatherbell.views.seatacensqpf]
+viewtype="meteogram"
+product="ecmwf-ensemble"
+region="KSEA"
+parameter="indiv_qpf_24"
 cyclehours=[0,12]
 
 [videos]
 
 [videos.watempwind]
 filename = "Washington-Temp-Wind"
-imagesPerSecond = "2"
 
-[videos.watempwind.views.wa2mtemp]
-title = "2M Temprature"
+[[videos.watempwind.clips]]
+view = "seatacensqpf"
 speed = "1"
+time = "10"
 
-[videos.watempwind.views.wagusts]
-title = "10M Wind Gust"
-speed = "1"
+[[videos.watempwind.clips.texts]]
+text = "Seatac Ensemble 24 Hour Precep"
+cords = { x = 500, y = 24 }
+color = "red"
+size = 22
+
+[[videos.watempwind.clips]]
+view = "wa2mtemp"
+speed = "5"
+time = "0"
+
+[[videos.watempwind.clips.texts]]
+text = "WA Wind\nGust"
+cords = { x = 715, y = 765 }
+color = "red"
+size = 20
+
+[[videos.watempwind.clips]]
+view = "wagusts"
+speed = "5"
+time = "0"
+
+[[videos.watempwind.clips.texts]]
+text = "WA 2m Temp"
+cords = { x = 710, y = 775 }
+color = "red"
+size = 20
 
 # [youtube.videos.watempwind]
-# title = "Washington ECMWF"
+# title = "Washington Weather"
 # description = "EURO run"
 # privacy = "unlisted"
 # tags = ["washington", "weather"]

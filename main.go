@@ -36,17 +36,27 @@ func main() {
 
 	// Load configuration
 	var conf config
-	_, err := toml.DecodeFile(configFile, &conf)
-	if err != nil {
-		log.Fatal(err)
+	if _, err := toml.DecodeFile(configFile, &conf); err != nil {
+		log.Fatalln(err)
+		return
 	}
 
 	// Download weatherbell assets
-	views := weatherbell.Download(&conf.Providers.Weatherbell, default_assets_dir)
+	if err := weatherbell.Download(&conf.Providers.Weatherbell, default_assets_dir); err != nil {
+		log.Fatalln(err)
+		return
+	}
 
-	// Make videos from created views
-	videoContent := videobuilder.CreateVideos(views, conf.Videos, default_output_videos_dir)
+	// Make videos from asset views
+	videoContent, err := videobuilder.BuildVideos(conf.Videos, default_assets_dir, default_output_videos_dir)
+	if err != nil {
+		log.Fatalln(err)
+		return
+	}
 
 	// Upload videos
-	videouploader.UploadVideos(&conf.Youtube, videoContent)
+	if err := videouploader.UploadVideos(&conf.Youtube, videoContent); err != nil {
+		log.Fatalln(err)
+		return
+	}
 }
