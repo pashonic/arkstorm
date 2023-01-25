@@ -55,5 +55,8 @@ func main() {
 	}
 
 	// Upload videos
-	videouploader.UploadVideos(&conf.Youtube, videoContent)
+	if err := videouploader.UploadVideos(&conf.Youtube, videoContent); err != nil {
+		log.Fatalln(err)
+		return
+	}
 }
