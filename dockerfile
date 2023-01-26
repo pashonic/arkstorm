@@ -7,7 +7,7 @@ RUN make build
 
 # BUGBUG: Make this more secure
 FROM alpine:latest  
-RUN apk --no-cache add ca-certificates ffmpeg tzdata aws-cli bash
+RUN apk --no-cache add ca-certificates ffmpeg tzdata aws-cli bash ttf-opensans
 WORKDIR /root/
 COPY --from=builder /go/arkstorm/entrypoint.sh ./
 COPY --from=builder /go/arkstorm/bin/arkstorm ./

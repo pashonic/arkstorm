@@ -1,0 +1,136 @@
+[providers]
+
+[providers.weatherbell.views.wa2mtemp]
+timespanhours=72
+viewtype="model"
+product="ecmwf-deterministic"
+region="washington"
+parameter="t2m_f"
+time_label_cords = { x = 420, y = 25 }
+time_label_timezone="America/Los_Angeles"
+cyclehours=[0,12]
+
+[providers.weatherbell.views.wagusts]
+timespanhours=72
+viewtype="model"
+product="ecmwf-deterministic"
+region="washington"
+parameter="gust_mph"
+time_label_cords = { x = 420, y = 25 }
+time_label_timezone="America/Los_Angeles"
+cyclehours=[0,12]
+
+[providers.weatherbell.views.snow12hr]
+timespanhours=72
+viewtype="model"
+product="ecmwf-deterministic"
+region="washington"
+parameter="snow_12hr"
+time_label_cords = { x = 462, y = 25 }
+time_label_timezone="America/Los_Angeles"
+cyclehours=[0,12]
+
+[providers.weatherbell.views.precip12hr]
+timespanhours=72
+viewtype="model"
+product="ecmwf-deterministic"
+region="washington"
+parameter="precip_12hr_inch"
+time_label_cords = { x = 436, y = 25 }
+time_label_timezone="America/Los_Angeles"
+cyclehours=[0,12]
+
+[providers.weatherbell.views.seatacsnowmembers]
+viewtype="meteogram"
+product="ecmwf-ensemble"
+region="KSEA"
+parameter="indiv_snow_24"
+cyclehours=[0,12]
+
+[videos]
+
+[videos.wawinter]
+filename = "Washington-Temp-Wind"
+
+#
+# Snow ensemble members 5 seconds.
+#
+
+[[videos.wawinter.clips]]
+view = "seatacsnowmembers"
+speed = "1"
+time = "5"
+
+[[videos.wawinter.clips.texts]]
+text = "Seatac Snow Members"
+cords = { x = 550, y = 30 }
+color = "red"
+size = 22
+
+
+#
+# 12 hour snow
+#
+
+[[videos.wawinter.clips]]
+view = "snow12hr"
+speed = "5"
+time = "0"
+
+[[videos.wawinter.clips.texts]]
+text = "12 Hour Snow" 
+cords = { x = 715, y = 780 }
+color = "red"
+size = 20
+
+#
+# 2M temps
+#
+
+[[videos.wawinter.clips]]
+view = "wa2mtemp"
+speed = "5"
+time = "0"
+
+[[videos.wawinter.clips.texts]]
+text = "WA 2m Temp" 
+cords = { x = 715, y = 785 }
+color = "red"
+size = 20
+
+#
+# 12 hour precip
+#
+
+[[videos.wawinter.clips]]
+view = "precip12hr"
+speed = "5"
+time = "0"
+
+[[videos.wawinter.clips.texts]]
+text = "12 Hour Precip" 
+cords = { x = 715, y = 780 }
+color = "red"
+size = 20
+
+#
+# Wind Gusts
+#
+
+[[videos.wawinter.clips]]
+view = "wagusts"
+speed = "5"
+time = "0"
+
+[[videos.wawinter.clips.texts]]
+text = "WA Wind Gust"
+cords = { x = 710, y = 780 }
+color = "red"
+size = 20
+
+[youtube.videos.wawinter]
+title = "Washington Weather"
+description = "EURO run"
+privacy = "unlisted"
+tags = ["washington", "weather"]
+categoryid = "28"
