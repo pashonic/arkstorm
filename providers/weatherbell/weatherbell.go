@@ -2,6 +2,7 @@ package weatherbell
 
 import (
 	"bytes"
+	_ "embed"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -31,8 +32,10 @@ const (
 	env_username_name  = "WEATHERBELL_USERNAME"
 	env_password_name  = "WEATHERBELL_PASSWORD"
 	env_sessionid_name = "WEATHERBELL_SESSIONID"
-	default_font_file  = "fonts/Yagora.ttf"
 )
+
+//go:embed fonts/Yagora.ttf
+var fontFileContexts []byte
 
 type frame struct {
 	url       string
@@ -203,11 +206,7 @@ func downloadFrameSet(frameList []frame, view WeatherBellView, targetDir string)
 func addLabel(img *image.RGBA, x, y int, label string) error {
 
 	// Load font
-	fontFile, err := ioutil.ReadFile(default_font_file)
-	if err != nil {
-		return err
-	}
-	ttf, err := truetype.Parse(fontFile)
+	ttf, err := truetype.Parse(fontFileContexts)
 	if err != nil {
 		return err
 	}
