@@ -11,6 +11,5 @@ RUN apk --no-cache add ca-certificates ffmpeg tzdata aws-cli bash ttf-opensans
 WORKDIR /root/
 COPY --from=builder /go/arkstorm/entrypoint.sh ./
 COPY --from=builder /go/arkstorm/bin/arkstorm ./
-COPY --from=builder /go/arkstorm/fonts/Yagora.ttf ./fonts/
 RUN chmod +x entrypoint.sh
 CMD ["./entrypoint.sh"]
