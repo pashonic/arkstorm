@@ -51,6 +51,7 @@ cyclehours=[0,12]
 
 [videos.wawinter]
 filename = "Washington-Temp-Wind"
+scale = "-1:1080"
 
 #
 # Snow ensemble members 5 seconds.

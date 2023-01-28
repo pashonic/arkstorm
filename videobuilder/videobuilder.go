@@ -28,6 +28,7 @@ type clip struct {
 
 type Video struct {
 	Filename string
+	Scale    string
 	Clips    []clip
 }
 
@@ -82,6 +83,8 @@ func build(video *Video, assetDir string, outputFilePath string) error {
 		streamInputs = append(streamInputs, streamInput)
 	}
 
-	// Build video
-	return ffmpeg.Concat(streamInputs).Output(outputFilePath).OverWriteOutput().Run()
+	// Scale and build video
+	finalStream := ffmpeg.Concat(streamInputs)
+	finalStream = finalStream.Filter("scale", ffmpeg.Args{video.Scale})
+	return finalStream.Output(outputFilePath).OverWriteOutput().Run()
 }
