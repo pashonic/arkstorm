@@ -17,7 +17,7 @@ func init() {
 
 func TestGetSessionId(t *testing.T) {
 
-	// Create mock
+	// Test Valid
 	mockclient.GetDoFunc = func(*http.Request) (*http.Response, error) {
 		return &http.Response{
 			StatusCode: 200,
@@ -32,9 +32,22 @@ func TestGetSessionId(t *testing.T) {
 			},
 		}, nil
 	}
-
-	// Check we got session id
 	sessionId, _ := getSessionId()
 	assert.EqualValues(t, "a3fd3b61d7db6d652d2c588bcd0b57a3", sessionId)
-	return
+
+	// Test Invalid
+	mockclient.GetDoFunc = func(*http.Request) (*http.Response, error) {
+		return &http.Response{
+			StatusCode: 200,
+			Body:       ioutil.NopCloser(bytes.NewReader([]byte("{}"))),
+			Header: http.Header{
+				"Set-Cookie": {
+					"PHPSESSID=a3fd3b61d7db6d652d2c588bcd0b57a3; expires=Mon, 06-Feb-2023 06:02:36 GMT; Max-Age=604800; path=/; HTTPOnly; Secure; domain=.weatherbell.com; HttpOnly",
+				},
+			},
+		}, nil
+	}
+	sessionId, err := getSessionId()
+	assert.NotNil(t, err)
+
 }
