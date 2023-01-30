@@ -23,6 +23,8 @@ import (
 	"github.com/golang/freetype/truetype"
 	"golang.org/x/image/font"
 	"golang.org/x/image/math/fixed"
+
+	"github.com/pashonic/arkstorm/utils/restclient"
 )
 
 const (
@@ -114,16 +116,12 @@ func getSessionId() (string, error) {
 	password := os.Getenv(env_password_name)
 
 	// Prepare request
-	loginPayload := strings.NewReader(fmt.Sprintf("username=%s&password=%s&remember_me=1&do_login=Login", username, password))
-	req, err := http.NewRequest("POST", login_url, loginPayload)
-	if err != nil {
-		return "nil", err
-	}
-	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+	loginPayload := []byte(fmt.Sprintf("username=%s&password=%s&remember_me=1&do_login=Login", username, password))
 
-	// Send request
-	client := &http.Client{}
-	res, err := client.Do(req)
+	// Header
+	headerPayload := http.Header{"Content-Type": {"application/x-www-form-urlencoded"}}
+
+	res, err := restclient.Post(login_url, loginPayload, headerPayload)
 	if err != nil {
 		return "nil", err
 	}
