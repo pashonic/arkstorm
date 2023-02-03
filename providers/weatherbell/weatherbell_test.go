@@ -32,7 +32,7 @@ func TestGetSessionId(t *testing.T) {
 			},
 		}, nil
 	}
-	sessionId, _ := getSessionId()
+	sessionId, _ := getSessionId("username", "password")
 	assert.EqualValues(t, "a3fd3b61d7db6d652d2c588bcd0b57a3", sessionId)
 
 	// Test Invalid
@@ -47,7 +47,38 @@ func TestGetSessionId(t *testing.T) {
 			},
 		}, nil
 	}
-	sessionId, err := getSessionId()
+	sessionId, err := getSessionId("username", "password")
 	assert.NotNil(t, err)
+
+}
+
+func TestGetCycleList(t *testing.T) {
+
+	// Test Valid
+	mockclient.GetDoFunc = func(*http.Request) (*http.Response, error) {
+
+		data := "[\"1675188000\",\"1675166400\",\"1675144800\",\"1675123200\",\"1675101600\"]"
+		return &http.Response{
+			StatusCode: 200,
+			Body:       ioutil.NopCloser(bytes.NewReader([]byte(data))),
+			Header:     http.Header{},
+		}, nil
+	}
+
+	view := WeatherBellView{
+		Viewtype:            "dummy1",
+		Product:             "dummy2",
+		Region:              "dummy3",
+		Parameter:           "dummy4",
+		Time_label_timezone: "dummy4",
+		Time_label_cords: struct {
+			X int
+			Y int
+		}{1, 1},
+		Timespanhours: 1,
+		Cyclehours:    []int{1, 3},
+	}
+	sessionId, _ := view.getCycleList("12345")
+	assert.EqualValues(t, "a3fd3b61d7db6d652d2c588bcd0b57a3", sessionId)
 
 }

@@ -69,8 +69,12 @@ func Download(weatherbell *Weatherbell, targetDir string) error {
 		return nil
 	}
 
+	// Get Credentials from environment variable
+	username := os.Getenv(env_username_name)
+	password := os.Getenv(env_password_name)
+
 	// Get session ID
-	sessionId, err := getSessionId()
+	sessionId, err := getSessionId(username, password)
 	if err != nil {
 		return err
 	}
@@ -104,16 +108,12 @@ func Download(weatherbell *Weatherbell, targetDir string) error {
 	return nil
 }
 
-func getSessionId() (string, error) {
+func getSessionId(username string, password string) (string, error) {
 
 	// Return environment var if provided
 	if os.Getenv(env_sessionid_name) != "" {
 		return os.Getenv(env_sessionid_name), nil
 	}
-
-	// Get Credentials from environment variable
-	username := os.Getenv(env_username_name)
-	password := os.Getenv(env_password_name)
 
 	// Prepare request
 	loginPayload := []byte(fmt.Sprintf("username=%s&password=%s&remember_me=1&do_login=Login", username, password))
