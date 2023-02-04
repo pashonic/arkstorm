@@ -90,7 +90,7 @@ func Download(weatherbell *Weatherbell, targetDir string) error {
 		}
 
 		// Find latest cycle time
-		selectedCycleTime, err := view.selectCycleTime(cycleList)
+		selectedCycleTime, err := view.selectLatestCycleTime(cycleList)
 		if err != nil {
 			return err
 		}
@@ -328,7 +328,7 @@ func (view *WeatherBellView) getCycleList(sessionId string) ([]string, error) {
 	return cycleList, nil
 }
 
-func (view *WeatherBellView) selectCycleTime(cycleList []string) (string, error) {
+func (view *WeatherBellView) selectLatestCycleTime(cycleList []string) (string, error) {
 
 	// Find latest cycle time
 	for _, cycle := range cycleList {
