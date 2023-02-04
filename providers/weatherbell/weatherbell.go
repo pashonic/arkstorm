@@ -17,7 +17,6 @@ import (
 	"path/filepath"
 	"regexp"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/golang/freetype/truetype"
@@ -48,18 +47,20 @@ type Weatherbell struct {
 	Views map[string]WeatherBellView
 }
 
+type Time_label_cords struct {
+	X int
+	Y int
+}
+
 type WeatherBellView struct {
 	Viewtype            string
 	Product             string
 	Region              string
 	Parameter           string
 	Time_label_timezone string
-	Time_label_cords    struct {
-		X int
-		Y int
-	}
-	Timespanhours int
-	Cyclehours    []int
+	Time_label_cords    Time_label_cords
+	Timespanhours       int
+	Cyclehours          []int
 }
 
 func Download(weatherbell *Weatherbell, targetDir string) error {
@@ -117,10 +118,9 @@ func getSessionId(username string, password string) (string, error) {
 
 	// Prepare request
 	loginPayload := []byte(fmt.Sprintf("username=%s&password=%s&remember_me=1&do_login=Login", username, password))
-
-	// Header
 	headerPayload := http.Header{"Content-Type": {"application/x-www-form-urlencoded"}}
 
+	// Send request
 	res, err := restclient.Post(login_url, loginPayload, headerPayload)
 	if err != nil {
 		return "nil", err
@@ -215,7 +215,6 @@ func addLabel(img *image.RGBA, x, y int, label string) error {
 		DPI:     72,
 		Hinting: font.HintingNone,
 	})
-
 	col := color.RGBA{255, 0, 0, 255} // red, Future version: make this configurable
 	point := fixed.Point26_6{fixed.I(x), fixed.I(y)}
 
@@ -232,20 +231,22 @@ func addLabel(img *image.RGBA, x, y int, label string) error {
 
 func (view *WeatherBellView) getFrameList(sessionId string, cycleTimeString string, timeSpanHours int) ([]frame, error) {
 
-	// Prepare request
-	payload := strings.NewReader(fmt.Sprintf(`{"action":"forecast","type":"%s","product":"%s","domain":"%s","param":"%s","init":"%s"}`, view.Viewtype, view.Product, view.Region, view.Parameter, cycleTimeString))
-	req, err := http.NewRequest("POST", api_image_url, payload)
-	if err != nil {
-		return nil, nil
+	// Check valid timespan hours
+	if timeSpanHours < 1 {
+		return nil, errors.New("timeSpanHours must be greater than 0")
 	}
-	req.Header.Add("cookie", "PHPSESSID="+sessionId)
-	req.Header.Add("Content-Type", "application/json")
+
+	// Prepare request
+	bodyPayload := []byte(fmt.Sprintf(`{"action":"forecast","type":"%s","product":"%s","domain":"%s","param":"%s","init":"%s"}`, view.Viewtype, view.Product, view.Region, view.Parameter, cycleTimeString))
+	headerPayload := http.Header{
+		"cookie":       {"PHPSESSID=" + sessionId},
+		"Content-Type": {"application/json"},
+	}
 
 	// Send request
-	client := &http.Client{}
-	res, err := client.Do(req)
+	res, err := restclient.Post(api_image_url, bodyPayload, headerPayload)
 	if err != nil {
-		return nil, nil
+		return nil, err
 	}
 
 	// Process request
@@ -299,17 +300,14 @@ func (view *WeatherBellView) getFrameList(sessionId string, cycleTimeString stri
 func (view *WeatherBellView) getCycleList(sessionId string) ([]string, error) {
 
 	// Prepare request
-	payload := strings.NewReader(fmt.Sprintf(`{"action":"init","type":"%s","product":"%s","domain":"%s","param":"%s"}`, view.Viewtype, view.Product, view.Region, view.Parameter))
-	req, err := http.NewRequest("POST", api_image_url, payload)
-	if err != nil {
-		return nil, err
+	bodyPayload := []byte(fmt.Sprintf(`{"action":"init","type":"%s","product":"%s","domain":"%s","param":"%s"}`, view.Viewtype, view.Product, view.Region, view.Parameter))
+	headerPayload := http.Header{
+		"cookie":       {"PHPSESSID=" + sessionId},
+		"Content-Type": {"application/json"},
 	}
-	req.Header.Add("cookie", "PHPSESSID="+sessionId)
-	req.Header.Add("Content-Type", "application/json")
 
 	// Send request
-	client := &http.Client{}
-	res, err := client.Do(req)
+	res, err := restclient.Post(api_image_url, bodyPayload, headerPayload)
 	if err != nil {
 		return nil, err
 	}
