@@ -44,7 +44,7 @@ type frame struct {
 }
 
 type Weatherbell struct {
-	Views map[string]WeatherBellView
+	Views map[string]View
 }
 
 type Time_label_cords struct {
@@ -52,7 +52,7 @@ type Time_label_cords struct {
 	Y int
 }
 
-type WeatherBellView struct { // BUGBUG: Just call it view
+type View struct { // BUGBUG: Just call it view
 	Viewtype            string
 	Product             string
 	Region              string
@@ -144,7 +144,7 @@ func getSessionId(username string, password string) (string, error) {
 	return match[1], nil
 }
 
-func downloadFrameSet(frameList []frame, view WeatherBellView, targetDir string) error {
+func downloadFrameSet(frameList []frame, view View, targetDir string) error {
 
 	// Create and verify directory path
 	if err := os.MkdirAll(targetDir, os.ModePerm); err != nil {
@@ -160,7 +160,7 @@ func downloadFrameSet(frameList []frame, view WeatherBellView, targetDir string)
 	return nil
 }
 
-func downloadFrame(index int, frame frame, view WeatherBellView, targetDir string) error {
+func downloadFrame(index int, frame frame, view View, targetDir string) error {
 	// Send request
 	res, err := restclient.Get(frame.url)
 	if err != nil {
@@ -237,7 +237,7 @@ func addLabel(img *image.RGBA, x, y int, label string) error {
 	return nil
 }
 
-func (view *WeatherBellView) getFrameList(sessionId string, cycleTimeString string, timeSpanHours int) ([]frame, error) {
+func (view *View) getFrameList(sessionId string, cycleTimeString string, timeSpanHours int) ([]frame, error) {
 
 	// Check valid timespan hours
 	if timeSpanHours == 0 {
@@ -305,7 +305,7 @@ func (view *WeatherBellView) getFrameList(sessionId string, cycleTimeString stri
 	return frameListReturn, nil
 }
 
-func (view *WeatherBellView) getCycleList(sessionId string) ([]string, error) {
+func (view *View) getCycleList(sessionId string) ([]string, error) {
 
 	// Prepare request
 	bodyPayload := []byte(fmt.Sprintf(`{"action":"init","type":"%s","product":"%s","domain":"%s","param":"%s"}`, view.Viewtype, view.Product, view.Region, view.Parameter))
@@ -336,7 +336,7 @@ func (view *WeatherBellView) getCycleList(sessionId string) ([]string, error) {
 	return cycleList, nil
 }
 
-func (view *WeatherBellView) selectLatestCycleTime(cycleList []string) (string, error) {
+func (view *View) selectLatestCycleTime(cycleList []string) (string, error) {
 
 	// Find latest cycle time
 	for _, cycle := range cycleList {

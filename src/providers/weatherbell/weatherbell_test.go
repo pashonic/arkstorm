@@ -69,7 +69,7 @@ func TestGetCycleList(t *testing.T) {
 			Header:     http.Header{},
 		}, nil
 	}
-	view := WeatherBellView{}
+	view := View{}
 	cycleList, err := view.getCycleList("")
 	expectedList := []string{"1675188000", "1675166400", "1675144800", "1675123200", "1675101600"}
 	if !reflect.DeepEqual(expectedList, cycleList) {
@@ -89,7 +89,7 @@ func TestGetFrameList(t *testing.T) {
 			Header:     http.Header{},
 		}, nil
 	}
-	view := WeatherBellView{
+	view := View{
 		Viewtype:  "dummy1",
 		Product:   "dummy2",
 		Region:    "dummy3",
@@ -129,20 +129,20 @@ func TestGetFrameList(t *testing.T) {
 func TestSelectLatestCycleTime(t *testing.T) {
 
 	// Test varies valid cycle hours
-	view := WeatherBellView{
+	view := View{
 		Cyclehours: []int{0, 12},
 	}
 	cycleList := []string{"1675447200", "1675425600", "1675404000", "1675382400"}
 	cycleTime, err := view.selectLatestCycleTime(cycleList)
 	assert.EqualValues(t, "1675425600", cycleTime)
 	assert.Nil(t, err)
-	view = WeatherBellView{
+	view = View{
 		Cyclehours: []int{6},
 	}
 	cycleTime, err = view.selectLatestCycleTime(cycleList)
 	assert.EqualValues(t, "1675404000", cycleTime)
 	assert.Nil(t, err)
-	view = WeatherBellView{
+	view = View{
 		Cyclehours: []int{18},
 	}
 	cycleTime, err = view.selectLatestCycleTime(cycleList)
@@ -150,7 +150,7 @@ func TestSelectLatestCycleTime(t *testing.T) {
 	assert.Nil(t, err)
 
 	// Test invalid cycle hour
-	view = WeatherBellView{
+	view = View{
 		Cyclehours: []int{10},
 	}
 	cycleTime, err = view.selectLatestCycleTime(cycleList)
@@ -159,7 +159,7 @@ func TestSelectLatestCycleTime(t *testing.T) {
 
 	// Test emtpy cycle list
 	cycleList = []string{}
-	view = WeatherBellView{
+	view = View{
 		Cyclehours: []int{18},
 	}
 	cycleTime, err = view.selectLatestCycleTime(cycleList)
@@ -168,7 +168,7 @@ func TestSelectLatestCycleTime(t *testing.T) {
 
 	// Test garbage cycle list data
 	cycleList = []string{"acv", "asdf", "gsdf0", "24fs"}
-	view = WeatherBellView{
+	view = View{
 		Cyclehours: []int{18},
 	}
 	cycleTime, err = view.selectLatestCycleTime(cycleList)
@@ -194,7 +194,7 @@ func TestDownloadFrameSet(t *testing.T) {
 	}
 
 	// Test frame download and adding label
-	view := WeatherBellView{
+	view := View{
 		Time_label_timezone: "America/Los_Angeles",
 		Time_label_cords:    Time_label_cords{X: 200, Y: 200},
 	}
@@ -210,7 +210,7 @@ func TestDownloadFrameSet(t *testing.T) {
 	}
 
 	// Test frame download without adding label
-	view = WeatherBellView{}
+	view = View{}
 	err = downloadFrame(1, frame, view, "testdata/")
 	assert.Nil(t, err)
 	expectedFileData, err = os.ReadFile("testdata/001_expected.png")
