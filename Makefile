@@ -4,6 +4,9 @@ build:
 run:
 	go run main.go "$(config)"
 
+test:
+	go test ./...
+
 clean:
 	rm -rf bin
 	rm -rf assets
