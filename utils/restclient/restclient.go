@@ -25,3 +25,11 @@ func Post(url string, body []byte, headers http.Header) (*http.Response, error) 
 	request.Header = headers
 	return Client.Do(request)
 }
+
+func Get(url string) (*http.Response, error) {
+	request, err := http.NewRequest(http.MethodGet, url, bytes.NewReader([]byte{}))
+	if err != nil {
+		return nil, err
+	}
+	return Client.Do(request)
+}

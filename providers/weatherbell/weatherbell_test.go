@@ -219,7 +219,7 @@ func TestDownloadFrameSet(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Nil(t, os.Remove("testdata/001.png"))
 	if bytes.Compare(expectedFileData, actualFileData) != 0 {
-		t.Fatalf("Actual label image didn't match expected")
+		t.Fatalf("Actual non-label image didn't match expected")
 	}
 
 }
