@@ -52,7 +52,7 @@ type Time_label_cords struct {
 	Y int
 }
 
-type WeatherBellView struct {
+type WeatherBellView struct { // BUGBUG: Just call it view
 	Viewtype            string
 	Product             string
 	Region              string
@@ -145,62 +145,70 @@ func getSessionId(username string, password string) (string, error) {
 }
 
 func downloadFrameSet(frameList []frame, view WeatherBellView, targetDir string) error {
+
+	// Create and verify directory path
+	if err := os.MkdirAll(targetDir, os.ModePerm); err != nil {
+		return err
+	}
+
+	// Download frame
 	for index, frame := range frameList {
-
-		// Create and verify directory path
-		if err := os.MkdirAll(targetDir, os.ModePerm); err != nil {
-			return err
-		}
-
-		// Send request
-		client := http.Client{}
-		res, err := client.Get(frame.url)
-		if err != nil {
-			return err
-		}
-
-		// Read frame from body.
-		body, err := ioutil.ReadAll(res.Body)
-		if err != nil {
-			return err
-		}
-		img, _, err := image.Decode(bytes.NewReader(body))
-		if err != nil {
-			return err
-		}
-		bounds := img.Bounds()
-		imgRGBA := image.NewRGBA(image.Rect(0, 0, bounds.Dx(), bounds.Dy()))
-		draw.Draw(imgRGBA, imgRGBA.Bounds(), img, bounds.Min, draw.Src)
-
-		// Draw date/time label to frame if specified
-		if view.Time_label_cords.X > 0 && view.Time_label_cords.Y > 0 {
-			location, err := time.LoadLocation(view.Time_label_timezone)
-			if err != nil {
-				return err
-			}
-			viewTime := frame.timeStamp.In(location)
-			dateTimeString := viewTime.Format("Mon, 2 Jan 3:04 PM MST")
-			if err := addLabel(imgRGBA, view.Time_label_cords.X, view.Time_label_cords.Y, dateTimeString); err != nil {
-				return err
-			}
-		}
-
-		// Write final frame to file
-		localTargetPath := filepath.Join(targetDir, fmt.Sprintf("%03d.png", index))
-		log.Println("Saving File: ", localTargetPath)
-		out, err := os.Create(localTargetPath)
-		if err != nil {
-			return err
-		}
-		if err = png.Encode(out, imgRGBA); err != nil {
-			return err
-		}
-		if err := out.Close(); err != nil {
+		if err := downloadFrame(index, frame, view, targetDir); err != nil {
 			return err
 		}
 	}
 	return nil
 }
+
+func downloadFrame(index int, frame frame, view WeatherBellView, targetDir string) error {
+	// Send request
+	res, err := restclient.Get(frame.url)
+	if err != nil {
+		return err
+	}
+
+	// Read frame from body.
+	body, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return err
+	}
+	img, _, err := image.Decode(bytes.NewReader(body))
+	if err != nil {
+		return err
+	}
+	bounds := img.Bounds()
+	imgRGBA := image.NewRGBA(image.Rect(0, 0, bounds.Dx(), bounds.Dy()))
+	draw.Draw(imgRGBA, imgRGBA.Bounds(), img, bounds.Min, draw.Src)
+
+	// Draw date/time label to frame if specified
+	if view.Time_label_cords.X > 0 && view.Time_label_cords.Y > 0 {
+		location, err := time.LoadLocation(view.Time_label_timezone)
+		if err != nil {
+			return err
+		}
+		viewTime := frame.timeStamp.In(location)
+		dateTimeString := viewTime.Format("Mon, 2 Jan 3:04 PM MST")
+		if err := addLabel(imgRGBA, view.Time_label_cords.X, view.Time_label_cords.Y, dateTimeString); err != nil {
+			return err
+		}
+	}
+
+	// Write final frame to file
+	localTargetPath := filepath.Join(targetDir, fmt.Sprintf("%03d.png", index))
+	log.Println("Saving File: ", localTargetPath)
+	out, err := os.Create(localTargetPath)
+	if err != nil {
+		return err
+	}
+	if err = png.Encode(out, imgRGBA); err != nil {
+		return err
+	}
+	if err := out.Close(); err != nil {
+		return err
+	}
+	return nil
+}
+
 func addLabel(img *image.RGBA, x, y int, label string) error {
 
 	// Load font
@@ -232,8 +240,8 @@ func addLabel(img *image.RGBA, x, y int, label string) error {
 func (view *WeatherBellView) getFrameList(sessionId string, cycleTimeString string, timeSpanHours int) ([]frame, error) {
 
 	// Check valid timespan hours
-	if timeSpanHours < 1 {
-		return nil, errors.New("timeSpanHours must be greater than 0")
+	if timeSpanHours == 0 {
+		timeSpanHours = 1
 	}
 
 	// Prepare request
