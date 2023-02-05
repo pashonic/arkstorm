@@ -10,8 +10,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/pashonic/arkstorm/utils/mockclient"
-	"github.com/pashonic/arkstorm/utils/restclient"
+	"github.com/pashonic/arkstorm/src/utils/mockclient"
+	"github.com/pashonic/arkstorm/src/utils/restclient"
 	"github.com/stretchr/testify/assert"
 )
 

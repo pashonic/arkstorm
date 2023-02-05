@@ -23,7 +23,7 @@ import (
 	"golang.org/x/image/font"
 	"golang.org/x/image/math/fixed"
 
-	"github.com/pashonic/arkstorm/utils/restclient"
+	"github.com/pashonic/arkstorm/src/utils/restclient"
 )
 
 const (

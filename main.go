@@ -5,9 +5,9 @@ import (
 	"os"
 
 	"github.com/BurntSushi/toml"
-	"github.com/pashonic/arkstorm/providers/weatherbell"
-	"github.com/pashonic/arkstorm/videobuilder"
-	"github.com/pashonic/arkstorm/videouploader"
+	"github.com/pashonic/arkstorm/src/providers/weatherbell"
+	"github.com/pashonic/arkstorm/src/videobuilder"
+	"github.com/pashonic/arkstorm/src/videouploader"
 )
 
 const (
