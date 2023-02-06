@@ -2,6 +2,11 @@ secretsprovider: awskms://12e32f8a-e56c-40a2-bab6-fc3be70d6e3b?region=us-west-2
 encryptedkey: AQICAHiRetEXxMKQpIutzbZwXEm4+z0MXE4KiDA+fq+rWtE0UwEZAIl72lN0m/XaT2hVJl2SAAAAfjB8BgkqhkiG9w0BBwagbzBtAgEAMGgGCSqGSIb3DQEHATAeBglghkgBZQMEAS4wEQQM0rVYpa/SMhB2K64KAgEQgDuZAfwkIggChS6vWiDkjVrscnr9EfUrV1z5h9KJJ2bM7DJsYfWXGvtNFvq0ZedWBa+/WqcJv5+d/Yj7zA==
 config:
   arkstorm:default-event-cron: 0 */8 * * ? *
+  arkstorm:jobs:
+    - name: washington
+      schedule: 30 8,20 * * ? *
+    - name: california
+      schedule: 30 9,21 * * ? *
   arkstorm:weatherbell-password:
     secure: v1:6qynnLVc+zMjCY2y:umRyO2NLDG0+Hgx1TEMnIQo0LFUqX7q0IVY=
   arkstorm:weatherbell-username:

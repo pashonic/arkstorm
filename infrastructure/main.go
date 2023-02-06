@@ -17,6 +17,11 @@ import (
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi/config"
 )
 
+type Job struct {
+	Name     string
+	Schedule string
+}
+
 func main() {
 	pulumi.Run(func(ctx *pulumi.Context) error {
 
@@ -347,142 +352,159 @@ func main() {
 				configBucket := args[5].(string)
 				jobQueueArn := args[6].(string)
 
-				jobDefContainerProperties, err := json.Marshal(map[string]interface{}{
-					"image":            fmt.Sprintf("%s:latest", dockerRepoUrl),
-					"jobRoleArn":       jobRoleArn,
-					"executionRoleArn": executeRoleArn,
-					"logConfiguration": map[string]interface{}{
-						"logDriver": "awslogs",
-					},
-					"resourceRequirements": []interface{}{
-						map[string]interface{}{
-							"value": "1",
-							"type":  "VCPU",
-						},
-						map[string]interface{}{
-							"value": "2048",
-							"type":  "MEMORY",
-						},
-					},
-					"secrets": []interface{}{
-						map[string]interface{}{
-							"name":      "WEATHERBELL_USERNAME",
-							"valueFrom": fmt.Sprintf("%s:weatherbell-username::", secretsArn),
-						},
-						map[string]interface{}{
-							"name":      "WEATHERBELL_PASSWORD",
-							"valueFrom": fmt.Sprintf("%s:weatherbell-password::", secretsArn),
-						},
-					},
-					"environment": []interface{}{
-						map[string]interface{}{
-							"name":  "AWS_S3_CREDS_BUCKET",
-							"value": fmt.Sprintf("s3://%s", credsBucket),
-						},
-						map[string]interface{}{
-							"name":  "AWS_S3_BUCKET_CONFIG_FILE",
-							"value": fmt.Sprintf("s3://%s/config.toml", configBucket),
-						},
-					},
-				})
-				if err != nil {
-					log.Fatal(err)
-				}
+				// Get jobs configuration
+				cfg := config.New(ctx, "")
+				jobs := []Job{}
+				cfg.RequireObject("jobs", &jobs)
 
-				jobDefinition, err := batch.NewJobDefinition(ctx, "jobdefinition", &batch.JobDefinitionArgs{
-					PlatformCapabilities: pulumi.StringArray{
-						pulumi.String("FARGATE"),
-					},
-					ContainerProperties: pulumi.String(jobDefContainerProperties),
-					Type:                pulumi.String("container"),
-					Name:                pulumi.String(fmt.Sprintf("%s-%s", ctx.Project(), ctx.Stack())),
-				})
-				if err != nil {
-					log.Fatal(err)
-				}
-
-				//
-				// Create scheduled event, layer 3 process
-				//
-
-				pulumi.All(jobDefinition.Arn, jobQueueArn).ApplyT(
-					func(args []interface{}) *pulumi.Output {
-						jobDefinitionArn := args[0].(string)
-						jobQueueArn := args[1].(string)
-
-						//
-						// Create event role
-						//
-
-						eventPolicyData, _ := iam.GetPolicyDocument(ctx, &iam.GetPolicyDocumentArgs{
-							Statements: []iam.GetPolicyDocumentStatement{
-								{
-									Actions: []string{
-										"batch:SubmitJob",
-									},
-									Resources: []string{
-										jobDefinitionArn,
-										jobQueueArn,
-									},
-								},
+				// Process jobs
+				for _, job := range jobs {
+					jobDefContainerProperties, err := json.Marshal(map[string]interface{}{
+						"image":            fmt.Sprintf("%s:latest", dockerRepoUrl),
+						"jobRoleArn":       jobRoleArn,
+						"executionRoleArn": executeRoleArn,
+						"logConfiguration": map[string]interface{}{
+							"logDriver": "awslogs",
+						},
+						"resourceRequirements": []interface{}{
+							map[string]interface{}{
+								"value": "1",
+								"type":  "VCPU",
 							},
-						}, nil)
-						eventAssumeRole, err := json.Marshal(map[string]interface{}{
-							"Version": "2012-10-17",
-							"Statement": []interface{}{
-								map[string]interface{}{
-									"Action": "sts:AssumeRole",
-									"Principal": map[string]interface{}{
-										"Service": "events.amazonaws.com",
-									},
-									"Effect": "Allow",
-									"Sid":    "",
-								},
+							map[string]interface{}{
+								"value": "2048",
+								"type":  "MEMORY",
 							},
-						})
-						eventRole, err := iam.NewRole(ctx, "event", &iam.RoleArgs{
-							AssumeRolePolicy: pulumi.String(eventAssumeRole),
-							NamePrefix:       pulumi.String(fmt.Sprintf("%s-%s-event-", ctx.Project(), ctx.Stack())),
-							InlinePolicies: iam.RoleInlinePolicyArray{
-								&iam.RoleInlinePolicyArgs{
-									Name:   pulumi.String("event-policy"),
-									Policy: pulumi.String(eventPolicyData.Json),
-								},
+						},
+						"secrets": []interface{}{
+							map[string]interface{}{
+								"name":      "WEATHERBELL_USERNAME",
+								"valueFrom": fmt.Sprintf("%s:weatherbell-username::", secretsArn),
 							},
-						})
-						if err != nil {
-							log.Fatal(err)
-						}
-
-						//
-						// Create event with batch job target
-						//
-
-						eventRule, err := cloudwatch.NewEventRule(ctx, "myeventrule", &cloudwatch.EventRuleArgs{
-							ScheduleExpression: pulumi.String(fmt.Sprintf("cron(%s)", userConf.Require("default-event-cron"))),
-							IsEnabled:          pulumi.Bool(false),
-							NamePrefix:         pulumi.String(fmt.Sprintf("%s-%s-", ctx.Project(), ctx.Stack())),
-						})
-						if err != nil {
-							log.Fatal(err)
-						}
-						_, err = cloudwatch.NewEventTarget(ctx, "myeventtarget", &cloudwatch.EventTargetArgs{
-							Rule: eventRule.Name,
-							BatchTarget: &cloudwatch.EventTargetBatchTargetArgs{
-								JobDefinition: pulumi.String(jobDefinitionArn),
-								JobName:       pulumi.String(fmt.Sprintf("%s-%s-event", ctx.Project(), ctx.Stack())),
+							map[string]interface{}{
+								"name":      "WEATHERBELL_PASSWORD",
+								"valueFrom": fmt.Sprintf("%s:weatherbell-password::", secretsArn),
 							},
-							RoleArn: eventRole.Arn,
-							Arn:     pulumi.String(jobQueueArn),
-						})
-						if err != nil {
-							log.Fatal(err)
-						}
-
-						return nil
+						},
+						"environment": []interface{}{
+							map[string]interface{}{
+								"name":  "AWS_S3_CREDS_BUCKET",
+								"value": fmt.Sprintf("s3://%s/%s", credsBucket, job.Name),
+							},
+							map[string]interface{}{
+								"name":  "AWS_S3_BUCKET_CONFIG_FILE",
+								"value": fmt.Sprintf("s3://%s/%s/active.toml", configBucket, job.Name),
+							},
+						},
 					})
+					if err != nil {
+						log.Fatal(err)
+					}
+					jobDefinition, err := batch.NewJobDefinition(ctx, "jobdefinition-"+job.Name, &batch.JobDefinitionArgs{
+						PlatformCapabilities: pulumi.StringArray{
+							pulumi.String("FARGATE"),
+						},
+						ContainerProperties: pulumi.String(jobDefContainerProperties),
+						Type:                pulumi.String("container"),
+						Name:                pulumi.String(fmt.Sprintf("%s-%s-%s", ctx.Project(), ctx.Stack(), job.Name)),
+					})
+					if err != nil {
+						log.Fatal(err)
+					}
 
-				ctx.Export("Job Definition", jobDefinition.Name)
+					// Create scheduled event, layer 3 process
+					pulumi.All(jobDefinition.Arn, jobQueueArn, job.Name).ApplyT(
+						func(args []interface{}) *pulumi.Output {
+							jobDefinitionArn := args[0].(string)
+							jobQueueArn := args[1].(string)
+							jobName := args[2].(string)
+
+							// Create event role
+							eventPolicyData, _ := iam.GetPolicyDocument(ctx, &iam.GetPolicyDocumentArgs{
+								Statements: []iam.GetPolicyDocumentStatement{
+									{
+										Actions: []string{
+											"batch:SubmitJob",
+										},
+										Resources: []string{
+											jobDefinitionArn,
+											jobQueueArn,
+										},
+									},
+								},
+							}, nil)
+							eventAssumeRole, err := json.Marshal(map[string]interface{}{
+								"Version": "2012-10-17",
+								"Statement": []interface{}{
+									map[string]interface{}{
+										"Action": "sts:AssumeRole",
+										"Principal": map[string]interface{}{
+											"Service": "events.amazonaws.com",
+										},
+										"Effect": "Allow",
+										"Sid":    "",
+									},
+								},
+							})
+							eventRole, err := iam.NewRole(ctx, "event-"+jobName, &iam.RoleArgs{
+								AssumeRolePolicy: pulumi.String(eventAssumeRole),
+								NamePrefix:       pulumi.String(fmt.Sprintf("%s-%s-event-", ctx.Project(), ctx.Stack())),
+								InlinePolicies: iam.RoleInlinePolicyArray{
+									&iam.RoleInlinePolicyArgs{
+										Name:   pulumi.String("event-policy-" + jobName),
+										Policy: pulumi.String(eventPolicyData.Json),
+									},
+								},
+							})
+							if err != nil {
+								log.Fatal(err)
+							}
+
+							// Create event with batch job target
+							eventRule, err := cloudwatch.NewEventRule(ctx, "eventrule-"+jobName, &cloudwatch.EventRuleArgs{
+								ScheduleExpression: pulumi.String(fmt.Sprintf("cron(%s)", userConf.Require("default-event-cron"))),
+								IsEnabled:          pulumi.Bool(false),
+								NamePrefix:         pulumi.String(fmt.Sprintf("%s-%s-%s-", ctx.Project(), ctx.Stack(), jobName)),
+							})
+							if err != nil {
+								log.Fatal(err)
+							}
+							_, err = cloudwatch.NewEventTarget(ctx, "eventtarget-"+jobName, &cloudwatch.EventTargetArgs{
+								Rule: eventRule.Name,
+								BatchTarget: &cloudwatch.EventTargetBatchTargetArgs{
+									JobDefinition: pulumi.String(jobDefinitionArn),
+									JobName:       pulumi.String(fmt.Sprintf("%s-%s-%s-event", ctx.Project(), ctx.Stack(), jobName)),
+								},
+								RoleArn: eventRole.Arn,
+								Arn:     pulumi.String(jobQueueArn),
+							})
+							if err != nil {
+								log.Fatal(err)
+							}
+
+							_, err = s3.NewBucketObject(ctx, "activefile-"+jobName, &s3.BucketObjectArgs{
+								Key:     pulumi.String(fmt.Sprintf("%s/active.toml", jobName)),
+								Bucket:  pulumi.String(configBucket),
+								Content: pulumi.String("Replace Me"),
+							})
+
+							_, err = s3.NewBucketObject(ctx, "secretfile-"+jobName, &s3.BucketObjectArgs{
+								Key:     pulumi.String(fmt.Sprintf("%s/client_secret.json", jobName)),
+								Bucket:  pulumi.String(credsBucket),
+								Content: pulumi.String("Replace Me"),
+							})
+
+							_, err = s3.NewBucketObject(ctx, "tokenfile-"+jobName, &s3.BucketObjectArgs{
+								Key:     pulumi.String(fmt.Sprintf("%s/client_token.json", jobName)),
+								Bucket:  pulumi.String(credsBucket),
+								Content: pulumi.String("Replace Me"),
+							})
+
+							ctx.Export(fmt.Sprintf("%s job definition", jobName), jobDefinition.Name)
+
+							return nil
+						})
+				}
 				return nil
 			})
 
