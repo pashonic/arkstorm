@@ -3,3 +3,5 @@ videos/
 bin/
 client_secret.json
 client_token.json
+src/providers/weatherbell/testdata/000.png
+src/providers/weatherbell/testdata/001.png
