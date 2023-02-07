@@ -2,7 +2,7 @@
  
 if [ -v AWS_S3_BUCKET_CONFIG_FILE ];
 then
-    aws s3 cp $AWS_S3_BUCKET_CONFIG_FILE ./
+    aws s3 cp $AWS_S3_BUCKET_CONFIG_FILE ./config.toml
 fi
 
 if [ -v AWS_S3_CREDS_BUCKET ];
