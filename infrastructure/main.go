@@ -338,6 +338,35 @@ func main() {
 			log.Fatal(err)
 		}
 
+		emailEventPattern, err := json.Marshal(map[string]interface{}{
+			"detail-type": []interface{}{
+				"Batch Job State Change",
+			},
+			"source": []interface{}{
+				"aws.batch",
+			},
+			"detail": map[string]interface{}{
+				"status": []interface{}{
+					"FAILED",
+					"SUCCEEDED",
+				},
+				"jobQueue": []interface{}{
+					"arn:aws:batch:us-west-2:602525097839:job-queue/arkstorm-dev", // BUGBUG be specific
+				},
+			},
+		})
+
+		// Create event with batch job target
+		jobEmailRule, err := cloudwatch.NewEventRule(ctx, "emailrule-"+ctx.Stack(), &cloudwatch.EventRuleArgs{
+			IsEnabled:    pulumi.Bool(true),
+			NamePrefix:   pulumi.String(fmt.Sprintf("%s-%s-email-", ctx.Project(), ctx.Stack())),
+			EventPattern: pulumi.String(emailEventPattern),
+		})
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Println(jobEmailRule)
+
 		//
 		// Create job definition, layer 2 process
 		//
