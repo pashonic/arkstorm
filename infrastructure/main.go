@@ -11,8 +11,10 @@ import (
 	"github.com/pulumi/pulumi-aws/sdk/v5/go/aws/ecr"
 	"github.com/pulumi/pulumi-aws/sdk/v5/go/aws/iam"
 	"github.com/pulumi/pulumi-aws/sdk/v5/go/aws/kms"
+	"github.com/pulumi/pulumi-aws/sdk/v5/go/aws/lambda"
 	"github.com/pulumi/pulumi-aws/sdk/v5/go/aws/s3"
 	"github.com/pulumi/pulumi-aws/sdk/v5/go/aws/secretsmanager"
+	"github.com/pulumi/pulumi-aws/sdk/v5/go/aws/sns"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi/config"
 )
@@ -338,34 +340,150 @@ func main() {
 			log.Fatal(err)
 		}
 
-		emailEventPattern, err := json.Marshal(map[string]interface{}{
-			"detail-type": []interface{}{
-				"Batch Job State Change",
-			},
-			"source": []interface{}{
-				"aws.batch",
-			},
-			"detail": map[string]interface{}{
-				"status": []interface{}{
-					"FAILED",
-					"SUCCEEDED",
-				},
-				"jobQueue": []interface{}{
-					"arn:aws:batch:us-west-2:602525097839:job-queue/arkstorm-dev", // BUGBUG be specific
-				},
-			},
-		})
+		//
+		// Create alerting
+		//
 
-		// Create event with batch job target
-		jobEmailRule, err := cloudwatch.NewEventRule(ctx, "emailrule-"+ctx.Stack(), &cloudwatch.EventRuleArgs{
-			IsEnabled:    pulumi.Bool(true),
-			NamePrefix:   pulumi.String(fmt.Sprintf("%s-%s-email-", ctx.Project(), ctx.Stack())),
-			EventPattern: pulumi.String(emailEventPattern),
+		snsAlert, err := sns.NewTopic(ctx, "alert", &sns.TopicArgs{
+			NamePrefix: pulumi.String(fmt.Sprintf("%s-%s-alert-", ctx.Project(), ctx.Stack())),
 		})
 		if err != nil {
-			log.Fatal(err)
+			return err
 		}
-		fmt.Println(jobEmailRule)
+
+		pulumi.All(jobQueue.Arn, snsAlert.Arn).ApplyT(
+			func(args []interface{}) *pulumi.Output {
+				jobQueueArn := args[0].(string)
+				snsArn := args[1].(string)
+
+				// Create event with batch job target
+				emailEventPattern, err := json.Marshal(map[string]interface{}{
+					"detail-type": []interface{}{
+						"Batch Job State Change",
+					},
+					"source": []interface{}{
+						"aws.batch",
+					},
+					"detail": map[string]interface{}{
+						"status": []interface{}{
+							"FAILED",
+							"SUCCEEDED",
+						},
+						"jobQueue": []interface{}{
+							jobQueueArn,
+						},
+					},
+				})
+				jobEmailEventRule, err := cloudwatch.NewEventRule(ctx, "sns-alert", &cloudwatch.EventRuleArgs{
+					IsEnabled:    pulumi.Bool(true),
+					NamePrefix:   pulumi.String(fmt.Sprintf("%s-%s-alert-", ctx.Project(), ctx.Stack())),
+					EventPattern: pulumi.String(emailEventPattern),
+				})
+				if err != nil {
+					log.Fatal(err)
+				}
+
+				role, err := iam.NewRole(ctx, "sns-alert", &iam.RoleArgs{
+					AssumeRolePolicy: pulumi.String(`{
+						"Version": "2012-10-17",
+						"Statement": [{
+							"Sid": "",
+							"Effect": "Allow",
+							"Principal": {
+								"Service": "lambda.amazonaws.com"
+							},
+							"Action": "sts:AssumeRole"
+						}]
+					}`),
+				})
+				if err != nil {
+					log.Fatal(err)
+				}
+
+				executePolicyData, err := iam.GetPolicyDocument(ctx, &iam.GetPolicyDocumentArgs{
+					Statements: []iam.GetPolicyDocumentStatement{
+						{
+							Actions: []string{
+								"logs:CreateLogGroup",
+								"logs:CreateLogStream",
+								"logs:PutLogEvents",
+							},
+							Resources: []string{
+								"*",
+							},
+						},
+						{
+							Actions: []string{
+								"sns:Publish",
+							},
+							Resources: []string{
+								snsArn,
+							},
+						},
+					},
+				}, nil)
+				if err != nil {
+					log.Fatal(err)
+				}
+
+				logPolicy, err := iam.NewRolePolicy(ctx, "lambda-log-policy", &iam.RolePolicyArgs{
+					Role:   role.Name,
+					Policy: pulumi.String(executePolicyData.Json),
+				})
+				if err != nil {
+					log.Fatal(err)
+				}
+
+				assetArchive := pulumi.NewAssetArchive(map[string]interface{}{
+					"lambda_function.py": pulumi.NewStringAsset(
+						`import boto3
+import json
+import os
+sns_arn = os.environ['SNS_TOPIC']
+
+def lambda_handler(event, context):
+	client = boto3.client("sns")
+	job = event["detail"]["jobName"]  
+	status = event["detail"]["status"]
+	subject = "{0}-{1}".format(job,status)
+	resp = client.publish(TargetArn=sns_arn, Message=json.dumps(event), Subject=subject)		 
+`),
+				})
+
+				lambdaAlert, err := lambda.NewFunction(
+					ctx,
+					"alert-lambda",
+					&lambda.FunctionArgs{
+						Handler: pulumi.String("lambda_function.lambda_handler"),
+						Role:    role.Arn,
+						Runtime: pulumi.String("python3.9"),
+						Code:    assetArchive,
+						Name:    pulumi.String(fmt.Sprintf("%s-%s-alert", ctx.Project(), ctx.Stack())),
+						Environment: &lambda.FunctionEnvironmentArgs{
+							Variables: pulumi.StringMap{
+								"SNS_TOPIC": pulumi.String(snsArn),
+							},
+						},
+					},
+					pulumi.DependsOn([]pulumi.Resource{logPolicy}),
+				)
+				if err != nil {
+					log.Fatal(err)
+				}
+
+				_, err = lambda.NewPermission(ctx, "allowCloudwatch", &lambda.PermissionArgs{
+					Action:    pulumi.String("lambda:InvokeFunction"),
+					Function:  lambdaAlert.Name,
+					Principal: pulumi.String("events.amazonaws.com"),
+					SourceArn: jobEmailEventRule.Arn,
+				})
+				if err != nil {
+					log.Fatal(err)
+				}
+
+				return nil
+			},
+		)
 
 		//
 		// Create job definition, layer 2 process
