@@ -488,7 +488,7 @@ def lambda_handler(event, context):
 		// Create job definition, layer 2 process
 		//
 
-		pulumi.All(jobRole.Arn, executeRole.Arn, dockerRepo.RepositoryUrl, secrets.Arn, credsBucket.Bucket, configBucket.Bucket, jobQueue.Arn).ApplyT(
+		pulumi.All(jobRole.Arn, executeRole.Arn, dockerRepo.RepositoryUrl, secrets.Arn, credsBucket.Bucket, configBucket.Bucket, jobQueue.Arn, snsAlert.Arn).ApplyT(
 			func(args []interface{}) *pulumi.Output {
 				jobRoleArn := args[0].(string)
 				executeRoleArn := args[1].(string)
@@ -497,6 +497,7 @@ def lambda_handler(event, context):
 				credsBucket := args[4].(string)
 				configBucket := args[5].(string)
 				jobQueueArn := args[6].(string)
+				snsAlertArn := args[7].(string)
 
 				// Get jobs configuration
 				cfg := config.New(ctx, "")
@@ -540,6 +541,10 @@ def lambda_handler(event, context):
 							map[string]interface{}{
 								"name":  "AWS_S3_BUCKET_CONFIG_FILE",
 								"value": fmt.Sprintf("s3://%s/%s/active.toml", configBucket, job.Name),
+							},
+							map[string]interface{}{
+								"name":  "YOUTUBE_UPLOAD_ALERT_SNS_ARN",
+								"value": snsAlertArn,
 							},
 						},
 					})
@@ -658,7 +663,7 @@ def lambda_handler(event, context):
 		// Attach resource specific access to roles, layer 2 process
 		//
 
-		pulumi.All(configBucket.Arn, credsBucket.Arn, kmsKey.Arn, secrets.Arn, jobRole.Name, executeRole.Name).ApplyT(
+		pulumi.All(configBucket.Arn, credsBucket.Arn, kmsKey.Arn, secrets.Arn, jobRole.Name, executeRole.Name, snsAlert.Arn).ApplyT(
 			func(args []interface{}) *pulumi.Output {
 				configBucketArn := args[0].(string)
 				credsBucketArn := args[1].(string)
@@ -666,6 +671,7 @@ def lambda_handler(event, context):
 				secretsArn := args[3].(string)
 				jobRoleName := args[4].(string)
 				executeRoleName := args[5].(string)
+				snsAlertArn := args[6].(string)
 
 				//
 				// Job role access
@@ -676,7 +682,6 @@ def lambda_handler(event, context):
 						{
 							Actions: []string{
 								"s3:GetObject",
-								"kms:Decrypt",
 								"s3:ListBucket",
 							},
 							Resources: []string{
@@ -684,7 +689,22 @@ def lambda_handler(event, context):
 								configBucketArn + "/*",
 								credsBucketArn,
 								credsBucketArn + "/*",
+							},
+						},
+						{
+							Actions: []string{
+								"kms:Decrypt",
+							},
+							Resources: []string{
 								kmsKeyArn,
+							},
+						},
+						{
+							Actions: []string{
+								"sns:Publish",
+							},
+							Resources: []string{
+								snsAlertArn,
 							},
 						},
 					},
@@ -715,11 +735,17 @@ def lambda_handler(event, context):
 						{
 							Actions: []string{
 								"kms:Decrypt",
+							},
+							Resources: []string{
+								kmsKeyArn,
+							},
+						},
+						{
+							Actions: []string{
 								"secretsmanager:GetSecretValue",
 							},
 							Resources: []string{
 								secretsArn,
-								kmsKeyArn,
 							},
 						},
 					},
