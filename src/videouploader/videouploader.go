@@ -43,38 +43,41 @@ func getTokenFromFile(tokenFilePath string) (*oauth2.Token, error) {
 	return token, nil
 }
 
-func UploadVideos(videos *Videos, videoContent map[string]string) error {
+func UploadVideos(videos *Videos, videoContent map[string]string) ([]string, error) {
+	youtubeVideoList := []string{}
 	for videoId, video := range videos.Videos {
-		if err := Upload(videoContent[videoId], &video); err != nil {
-			return err
+		vidId, err := upload(videoContent[videoId], &video)
+		if err != nil {
+			return youtubeVideoList, err
 		}
+		youtubeVideoList = append(youtubeVideoList, vidId)
 	}
-	return nil
+	return youtubeVideoList, nil
 }
 
-func Upload(videoFilePath string, video *Video) error {
+func upload(videoFilePath string, video *Video) (string, error) {
 	ctx := context.Background()
 
 	// Get config using google client config secret file
 	byteData, err := ioutil.ReadFile(default_client_secret_file)
 	if err != nil {
-		return err
+		return "", err
 	}
 	config, err := google.ConfigFromJSON(byteData, youtube.YoutubeUploadScope)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	// Get Token file
 	token, err := getTokenFromFile(default_client_token_file)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	// Initialize service
 	service, err := youtube.NewService(ctx, option.WithTokenSource(config.TokenSource(ctx, token)))
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	// Create upload parameter object
@@ -93,14 +96,14 @@ func Upload(videoFilePath string, video *Video) error {
 	file, err := os.Open(videoFilePath)
 	defer file.Close()
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	// Upload video
 	response, err := call.Media(file).Do()
 	if err != nil {
-		return err
+		return "", err
 	}
 	log.Printf("Upload successful! Video ID: %v\n", response.Id)
-	return nil
+	return response.Id, nil
 }

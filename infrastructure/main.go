@@ -367,7 +367,6 @@ func main() {
 					"detail": map[string]interface{}{
 						"status": []interface{}{
 							"FAILED",
-							"SUCCEEDED",
 						},
 						"jobQueue": []interface{}{
 							jobQueueArn,
