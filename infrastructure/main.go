@@ -341,20 +341,20 @@ func main() {
 		}
 
 		//
-		// Create alerting
+		// Create sns failure
 		//
 
-		snsAlert, err := sns.NewTopic(ctx, "alert", &sns.TopicArgs{
-			NamePrefix: pulumi.String(fmt.Sprintf("%s-%s-alert-", ctx.Project(), ctx.Stack())),
+		snsFailure, err := sns.NewTopic(ctx, "failure", &sns.TopicArgs{
+			NamePrefix: pulumi.String(fmt.Sprintf("%s-%s-failure-", ctx.Project(), ctx.Stack())),
 		})
 		if err != nil {
 			return err
 		}
 
-		pulumi.All(jobQueue.Arn, snsAlert.Arn).ApplyT(
+		pulumi.All(jobQueue.Arn, snsFailure.Arn).ApplyT(
 			func(args []interface{}) *pulumi.Output {
 				jobQueueArn := args[0].(string)
-				snsArn := args[1].(string)
+				snsFailureArn := args[1].(string)
 
 				// Create event with batch job target
 				emailEventPattern, err := json.Marshal(map[string]interface{}{
@@ -373,16 +373,16 @@ func main() {
 						},
 					},
 				})
-				jobEmailEventRule, err := cloudwatch.NewEventRule(ctx, "sns-alert", &cloudwatch.EventRuleArgs{
+				jobEmailEventRule, err := cloudwatch.NewEventRule(ctx, "sns-failure", &cloudwatch.EventRuleArgs{
 					IsEnabled:    pulumi.Bool(true),
-					NamePrefix:   pulumi.String(fmt.Sprintf("%s-%s-alert-", ctx.Project(), ctx.Stack())),
+					NamePrefix:   pulumi.String(fmt.Sprintf("%s-%s-failure-", ctx.Project(), ctx.Stack())),
 					EventPattern: pulumi.String(emailEventPattern),
 				})
 				if err != nil {
 					log.Fatal(err)
 				}
 
-				role, err := iam.NewRole(ctx, "sns-alert", &iam.RoleArgs{
+				role, err := iam.NewRole(ctx, "sns-failure", &iam.RoleArgs{
 					AssumeRolePolicy: pulumi.String(`{
 						"Version": "2012-10-17",
 						"Statement": [{
@@ -416,7 +416,7 @@ func main() {
 								"sns:Publish",
 							},
 							Resources: []string{
-								snsArn,
+								snsFailureArn,
 							},
 						},
 					},
@@ -460,7 +460,7 @@ def lambda_handler(event, context):
 						Name:    pulumi.String(fmt.Sprintf("%s-%s-alert", ctx.Project(), ctx.Stack())),
 						Environment: &lambda.FunctionEnvironmentArgs{
 							Variables: pulumi.StringMap{
-								"SNS_TOPIC": pulumi.String(snsArn),
+								"SNS_TOPIC": pulumi.String(snsFailureArn),
 							},
 						},
 					},
@@ -488,7 +488,7 @@ def lambda_handler(event, context):
 		// Create job definition, layer 2 process
 		//
 
-		pulumi.All(jobRole.Arn, executeRole.Arn, dockerRepo.RepositoryUrl, secrets.Arn, credsBucket.Bucket, configBucket.Bucket, jobQueue.Arn, snsAlert.Arn).ApplyT(
+		pulumi.All(jobRole.Arn, executeRole.Arn, dockerRepo.RepositoryUrl, secrets.Arn, credsBucket.Bucket, configBucket.Bucket, jobQueue.Arn).ApplyT(
 			func(args []interface{}) *pulumi.Output {
 				jobRoleArn := args[0].(string)
 				executeRoleArn := args[1].(string)
@@ -497,7 +497,6 @@ def lambda_handler(event, context):
 				credsBucket := args[4].(string)
 				configBucket := args[5].(string)
 				jobQueueArn := args[6].(string)
-				snsAlertArn := args[7].(string)
 
 				// Get jobs configuration
 				cfg := config.New(ctx, "")
@@ -541,10 +540,6 @@ def lambda_handler(event, context):
 							map[string]interface{}{
 								"name":  "AWS_S3_BUCKET_CONFIG_FILE",
 								"value": fmt.Sprintf("s3://%s/%s/active.toml", configBucket, job.Name),
-							},
-							map[string]interface{}{
-								"name":  "YOUTUBE_UPLOAD_ALERT_SNS_ARN",
-								"value": snsAlertArn,
 							},
 						},
 					})
@@ -663,7 +658,7 @@ def lambda_handler(event, context):
 		// Attach resource specific access to roles, layer 2 process
 		//
 
-		pulumi.All(configBucket.Arn, credsBucket.Arn, kmsKey.Arn, secrets.Arn, jobRole.Name, executeRole.Name, snsAlert.Arn).ApplyT(
+		pulumi.All(configBucket.Arn, credsBucket.Arn, kmsKey.Arn, secrets.Arn, jobRole.Name, executeRole.Name).ApplyT(
 			func(args []interface{}) *pulumi.Output {
 				configBucketArn := args[0].(string)
 				credsBucketArn := args[1].(string)
@@ -671,7 +666,6 @@ def lambda_handler(event, context):
 				secretsArn := args[3].(string)
 				jobRoleName := args[4].(string)
 				executeRoleName := args[5].(string)
-				snsAlertArn := args[6].(string)
 
 				//
 				// Job role access
@@ -704,7 +698,7 @@ def lambda_handler(event, context):
 								"sns:Publish",
 							},
 							Resources: []string{
-								snsAlertArn,
+								"*",
 							},
 						},
 					},

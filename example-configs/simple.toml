@@ -72,3 +72,4 @@ size = 20
 # privacy = "unlisted"
 # tags = ["washington", "weather"]
 # categoryid = "28"
+# snsalertarn = "arn:aws:sns:us-west-2:602525097839:arkstorm-dev-alert-20230209033803325900000002"

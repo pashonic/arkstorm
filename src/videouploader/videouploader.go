@@ -11,6 +11,8 @@ import (
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/option"
 	"google.golang.org/api/youtube/v3"
+
+	"github.com/pashonic/arkstorm/src/utils/sendsns"
 )
 
 const (
@@ -28,6 +30,7 @@ type Video struct {
 	Privacy     string
 	Tags        []string
 	CategoryId  string
+	SnsAlertArn string
 }
 
 func getTokenFromFile(tokenFilePath string) (*oauth2.Token, error) {
@@ -105,5 +108,13 @@ func upload(videoFilePath string, video *Video) (string, error) {
 		return "", err
 	}
 	log.Printf("Upload successful! Video ID: %v\n", response.Id)
+
+	// Send sns alert
+	youtubeLink := "https://youtu.be/" + response.Id
+	if video.SnsAlertArn != "" {
+		if err := sendsns.SendSNS("Washington Weather Video Uploaded", youtubeLink, video.SnsAlertArn); err != nil {
+			return response.Id, err
+		}
+	}
 	return response.Id, nil
 }

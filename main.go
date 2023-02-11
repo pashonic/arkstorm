@@ -6,7 +6,6 @@ import (
 
 	"github.com/BurntSushi/toml"
 	"github.com/pashonic/arkstorm/src/providers/weatherbell"
-	"github.com/pashonic/arkstorm/src/utils/sendsns"
 	"github.com/pashonic/arkstorm/src/videobuilder"
 	"github.com/pashonic/arkstorm/src/videouploader"
 )
@@ -56,18 +55,9 @@ func main() {
 	}
 
 	// Upload videos
-	videoList, err := videouploader.UploadVideos(&conf.Youtube, videoContent)
+	_, err = videouploader.UploadVideos(&conf.Youtube, videoContent)
 	if err != nil {
 		log.Fatalln(err)
 		return
-	}
-
-	// Send out alerts
-	for _, vidId := range videoList {
-		youtubeLink := "https://youtu.be/" + vidId
-		if err := sendsns.SendSNS("Washington Weather Video Uploaded", youtubeLink); err != nil {
-			log.Fatalln(err)
-			return
-		}
 	}
 }
