@@ -21,7 +21,7 @@ type config struct {
 		Weatherbell weatherbell.Weatherbell
 	}
 	Videos  map[string]videobuilder.Video
-	Youtube videouploader.Videos
+	Youtube videouploader.YoutubeVideos
 }
 
 func main() {
@@ -48,14 +48,14 @@ func main() {
 	}
 
 	// Make videos from asset views
-	videoContent, err := videobuilder.BuildVideos(conf.Videos, default_assets_dir, default_output_videos_dir)
+	outputVideos, err := videobuilder.BuildVideos(conf.Videos, default_assets_dir, default_output_videos_dir)
 	if err != nil {
 		log.Fatalln(err)
 		return
 	}
 
 	// Upload videos
-	_, err = videouploader.UploadVideos(&conf.Youtube, videoContent)
+	err = videouploader.UploadVideos(&conf.Youtube, outputVideos)
 	if err != nil {
 		log.Fatalln(err)
 		return

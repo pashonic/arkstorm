@@ -2,6 +2,8 @@ package videouploader
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
@@ -13,6 +15,7 @@ import (
 	"google.golang.org/api/youtube/v3"
 
 	"github.com/pashonic/arkstorm/src/utils/sendsns"
+	"github.com/pashonic/arkstorm/src/videobuilder"
 )
 
 const (
@@ -20,11 +23,11 @@ const (
 	default_client_token_file  = "client_token.json"
 )
 
-type Videos struct {
-	Videos map[string]Video
+type YoutubeVideos struct {
+	Videos map[string]YoutubeVideo
 }
 
-type Video struct {
+type YoutubeVideo struct {
 	Title       string
 	Description string
 	Privacy     string
@@ -46,75 +49,89 @@ func getTokenFromFile(tokenFilePath string) (*oauth2.Token, error) {
 	return token, nil
 }
 
-func UploadVideos(videos *Videos, videoContent map[string]string) ([]string, error) {
-	youtubeVideoList := []string{}
-	for videoId, video := range videos.Videos {
-		vidId, err := upload(videoContent[videoId], &video)
-		if err != nil {
-			return youtubeVideoList, err
+func UploadVideos(youtubeVideos *YoutubeVideos, videos map[string]videobuilder.OutputVideo) error {
+
+	for videoId, youtubeVideo := range youtubeVideos.Videos {
+		video, exists := videos[videoId]
+		if !exists {
+			return errors.New("Generated video ID doesn't exist")
 		}
-		youtubeVideoList = append(youtubeVideoList, vidId)
+		if err := upload(video, youtubeVideo); err != nil {
+			return err
+		}
 	}
-	return youtubeVideoList, nil
+	return nil
 }
 
-func upload(videoFilePath string, video *Video) (string, error) {
+func upload(video videobuilder.OutputVideo, youtubeVideo YoutubeVideo) error {
 	ctx := context.Background()
 
 	// Get config using google client config secret file
 	byteData, err := ioutil.ReadFile(default_client_secret_file)
 	if err != nil {
-		return "", err
+		return err
 	}
 	config, err := google.ConfigFromJSON(byteData, youtube.YoutubeUploadScope)
 	if err != nil {
-		return "", err
+		return err
 	}
 
 	// Get Token file
 	token, err := getTokenFromFile(default_client_token_file)
 	if err != nil {
-		return "", err
+		return err
 	}
 
 	// Initialize service
 	service, err := youtube.NewService(ctx, option.WithTokenSource(config.TokenSource(ctx, token)))
 	if err != nil {
-		return "", err
+		return err
+	}
+
+	description := ""
+	for _, clip := range video.Clips {
+		timeString := fmt.Sprintf(secondsToMinutes(clip.StartTimeSec))
+		description += fmt.Sprintf("%v %v\n", timeString, clip.Name)
 	}
 
 	// Create upload parameter object
 	upload := &youtube.Video{
 		Snippet: &youtube.VideoSnippet{
-			Title:       video.Title,
-			Description: video.Description,
-			CategoryId:  video.CategoryId,
+			Title:       youtubeVideo.Title,
+			Description: description,
+			CategoryId:  youtubeVideo.CategoryId,
 		},
-		Status: &youtube.VideoStatus{PrivacyStatus: video.Privacy},
+		Status: &youtube.VideoStatus{PrivacyStatus: youtubeVideo.Privacy},
 	}
-	upload.Snippet.Tags = video.Tags
+	upload.Snippet.Tags = youtubeVideo.Tags
 	call := service.Videos.Insert([]string{"snippet,status"}, upload)
 
 	// Open video file
-	file, err := os.Open(videoFilePath)
+	file, err := os.Open(video.FilePath)
 	defer file.Close()
 	if err != nil {
-		return "", err
+		return err
 	}
 
 	// Upload video
 	response, err := call.Media(file).Do()
 	if err != nil {
-		return "", err
+		return err
 	}
 	log.Printf("Upload successful! Video ID: %v\n", response.Id)
 
-	// Send sns alert
+	// Send SNS alert
 	youtubeLink := "https://youtu.be/" + response.Id
-	if video.SnsAlertArn != "" {
-		if err := sendsns.SendSNS("Washington Weather Video Uploaded", youtubeLink, video.SnsAlertArn); err != nil {
-			return response.Id, err
+	if youtubeVideo.SnsAlertArn != "" {
+		if err := sendsns.SendSNS("Washington Weather Video Uploaded", youtubeLink, youtubeVideo.SnsAlertArn); err != nil {
+			return err
 		}
 	}
-	return response.Id, nil
+	return nil
+}
+
+func secondsToMinutes(inSeconds int) string {
+	minutes := inSeconds / 60
+	seconds := inSeconds % 60
+	return fmt.Sprintf("%v:%02d", minutes, seconds)
 }
