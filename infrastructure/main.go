@@ -7,8 +7,6 @@ import (
 
 	"github.com/pulumi/pulumi-aws/sdk/v5/go/aws/batch"
 	"github.com/pulumi/pulumi-aws/sdk/v5/go/aws/cloudwatch"
-	"github.com/pulumi/pulumi-aws/sdk/v5/go/aws/ec2"
-	"github.com/pulumi/pulumi-aws/sdk/v5/go/aws/ecr"
 	"github.com/pulumi/pulumi-aws/sdk/v5/go/aws/iam"
 	"github.com/pulumi/pulumi-aws/sdk/v5/go/aws/kms"
 	"github.com/pulumi/pulumi-aws/sdk/v5/go/aws/lambda"
@@ -93,149 +91,6 @@ func main() {
 					},
 				},
 			},
-		})
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		//
-		// Networking resources
-		//
-
-		vpc, err := ec2.NewVpc(ctx, "main", &ec2.VpcArgs{
-			CidrBlock: pulumi.String("10.0.0.0/16"),
-			Tags: pulumi.StringMap{
-				"Name": pulumi.String(fmt.Sprintf("%s-%s", ctx.Project(), ctx.Stack())),
-			},
-		})
-		if err != nil {
-			log.Fatal(err)
-		}
-		securityGroup, err := ec2.NewDefaultSecurityGroup(ctx, "vpc-default", &ec2.DefaultSecurityGroupArgs{
-			VpcId:   vpc.ID(),
-			Ingress: ec2.DefaultSecurityGroupIngressArray{},
-			Egress: ec2.DefaultSecurityGroupEgressArray{
-				&ec2.DefaultSecurityGroupEgressArgs{
-					FromPort: pulumi.Int(0),
-					ToPort:   pulumi.Int(0),
-					Protocol: pulumi.String("-1"),
-					CidrBlocks: pulumi.StringArray{
-						pulumi.String("0.0.0.0/0"),
-					},
-				},
-			},
-			Tags: pulumi.StringMap{
-				"Name": pulumi.String(fmt.Sprintf("%s-%s", ctx.Project(), ctx.Stack())),
-			},
-		})
-		if err != nil {
-			log.Fatal(err)
-		}
-		internetGateway, err := ec2.NewInternetGateway(ctx, "internetGateway", &ec2.InternetGatewayArgs{
-			VpcId: vpc.ID(),
-			Tags: pulumi.StringMap{
-				"Name": pulumi.String(fmt.Sprintf("%s-%s", ctx.Project(), ctx.Stack())),
-			},
-		})
-		if err != nil {
-			log.Fatal(err)
-		}
-		subnetPublic, err := ec2.NewSubnet(ctx, "public", &ec2.SubnetArgs{
-			VpcId:     vpc.ID(),
-			CidrBlock: pulumi.String("10.0.0.0/20"),
-			Tags: pulumi.StringMap{
-				"Name": pulumi.String(fmt.Sprintf("%s-%s-public", ctx.Project(), ctx.Stack())),
-			},
-		})
-		if err != nil {
-			log.Fatal(err)
-		}
-		subnetPrivate, err := ec2.NewSubnet(ctx, "private", &ec2.SubnetArgs{
-			VpcId:     vpc.ID(),
-			CidrBlock: pulumi.String("10.0.128.0/20"),
-			Tags: pulumi.StringMap{
-				"Name": pulumi.String(fmt.Sprintf("%s-%s-private", ctx.Project(), ctx.Stack())),
-			},
-		})
-		if err != nil {
-			log.Fatal(err)
-		}
-		elasticIp, err := ec2.NewEip(ctx, "elasticip", &ec2.EipArgs{
-			Vpc: pulumi.Bool(true),
-			Tags: pulumi.StringMap{
-				"Name": pulumi.String(fmt.Sprintf("%s-%s-%s", ctx.Project(), ctx.Stack(), region)),
-			},
-		})
-		if err != nil {
-			log.Fatal(err)
-		}
-		natGateway, err := ec2.NewNatGateway(ctx, "nat", &ec2.NatGatewayArgs{
-			AllocationId: elasticIp.ID(),
-			SubnetId:     subnetPublic.ID(),
-			Tags: pulumi.StringMap{
-				"Name": pulumi.String(fmt.Sprintf("%s-%s", ctx.Project(), ctx.Stack())),
-			},
-		}, pulumi.DependsOn([]pulumi.Resource{
-			internetGateway,
-		}))
-		if err != nil {
-			log.Fatal(err)
-		}
-		routePublic, err := ec2.NewRouteTable(ctx, "public", &ec2.RouteTableArgs{
-			VpcId: vpc.ID(),
-			Routes: ec2.RouteTableRouteArray{
-				&ec2.RouteTableRouteArgs{
-					CidrBlock: pulumi.String("0.0.0.0/0"),
-					GatewayId: internetGateway.ID(),
-				},
-			},
-			Tags: pulumi.StringMap{
-				"Name": pulumi.String(fmt.Sprintf("%s-%s-public", ctx.Project(), ctx.Stack())),
-			},
-		})
-		if err != nil {
-			log.Fatal(err)
-		}
-		routePrivate, err := ec2.NewRouteTable(ctx, "private", &ec2.RouteTableArgs{
-			VpcId: vpc.ID(),
-			Routes: ec2.RouteTableRouteArray{
-				&ec2.RouteTableRouteArgs{
-					CidrBlock:    pulumi.String("0.0.0.0/0"),
-					NatGatewayId: natGateway.ID(),
-				},
-			},
-			Tags: pulumi.StringMap{
-				"Name": pulumi.String(fmt.Sprintf("%s-%s-private", ctx.Project(), ctx.Stack())),
-			},
-		})
-		if err != nil {
-			log.Fatal(err)
-		}
-		_, err = ec2.NewRouteTableAssociation(ctx, "rta-Public", &ec2.RouteTableAssociationArgs{
-			SubnetId:     subnetPublic.ID(),
-			RouteTableId: routePublic.ID(),
-		})
-		if err != nil {
-			log.Fatal(err)
-		}
-		_, err = ec2.NewRouteTableAssociation(ctx, "rta-Private", &ec2.RouteTableAssociationArgs{
-			SubnetId:     subnetPrivate.ID(),
-			RouteTableId: routePrivate.ID(),
-		})
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		//
-		// ECR Repository
-		//
-
-		dockerRepo, err := ecr.NewRepository(ctx, "docker-repo", &ecr.RepositoryArgs{
-			ImageScanningConfiguration: &ecr.RepositoryImageScanningConfigurationArgs{
-				ScanOnPush: pulumi.Bool(false),
-			},
-			ImageTagMutability: pulumi.String("MUTABLE"),
-			Name:               pulumi.String(fmt.Sprintf("%s-%s", ctx.Project(), ctx.Stack())),
 		})
 		if err != nil {
 			log.Fatal(err)
@@ -348,7 +203,7 @@ func main() {
 			NamePrefix: pulumi.String(fmt.Sprintf("%s-%s-failure-", ctx.Project(), ctx.Stack())),
 		})
 		if err != nil {
-			return err
+			log.Fatal(err)
 		}
 
 		pulumi.All(jobQueue.Arn, snsFailure.Arn).ApplyT(
