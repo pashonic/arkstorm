@@ -1,18 +1,13 @@
 package sendsns
 
 import (
-	"os"
+	"fmt"
 
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sns"
 )
 
-const (
-	env_sns_arn = "YOUTUBE_UPLOAD_ALERT_SNS_ARN"
-)
-
-func SendSNS(subject string, message string) error {
-	snsArn := os.Getenv(env_sns_arn)
+func SendSNS(subject string, message string, snsArn string) error {
 	if snsArn == "" {
 		return nil
 	}
@@ -25,5 +20,8 @@ func SendSNS(subject string, message string) error {
 		TopicArn: &snsArn,
 		Subject:  &subject,
 	})
+	if err == nil {
+		fmt.Println("SNS alert Sent to: " + snsArn)
+	}
 	return err
 }

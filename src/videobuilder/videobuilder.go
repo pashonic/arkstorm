@@ -2,9 +2,9 @@ package videobuilder
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path/filepath"
-	"strconv"
 
 	ffmpeg "github.com/u2takey/ffmpeg-go"
 )
@@ -22,17 +22,30 @@ type text struct {
 type clip struct {
 	View  string
 	Texts []text
-	Speed string
-	Time  string
+	Name  string
+	Speed int
+	Time  int
 }
 
 type Video struct {
-	Filename string
-	Scale    string
-	Clips    []clip
+	Filename       string
+	OutputFilePath string
+	Scale          string
+	Clips          []clip
 }
 
-func BuildVideos(videos map[string]Video, assetDir string, outputDir string) (map[string]string, error) {
+type OutputClip struct {
+	Name         string
+	StartTimeSec int
+}
+
+type OutputVideo struct {
+	FilePath string
+	Clips    []OutputClip
+}
+
+func BuildVideos(videos map[string]Video, assetDir string, outputDir string) (map[string]OutputVideo, error) {
+	returnVideos := map[string]OutputVideo{}
 
 	// Make sure output directory exists
 	if err := os.MkdirAll(outputDir, os.ModePerm); err != nil {
@@ -40,30 +53,46 @@ func BuildVideos(videos map[string]Video, assetDir string, outputDir string) (ma
 	}
 
 	// Process videos
-	videoContent := make(map[string]string)
 	for videoId, video := range videos {
-		outputFilePath := filepath.Join(outputDir, video.Filename+".mp4")
-		if err := build(&video, assetDir, outputFilePath); err != nil {
+		var outputVideo OutputVideo
+		outputVideo.FilePath = filepath.Join(outputDir, videos[videoId].Filename+".mp4")
+		returnClips, err := build(&video, assetDir, outputVideo.FilePath)
+		if err != nil {
 			return nil, err
 		}
-		videoContent[videoId] = outputFilePath
+		outputVideo.Clips = returnClips
+		returnVideos[videoId] = outputVideo
 	}
-	return videoContent, nil
+	return returnVideos, nil
 }
 
-func build(video *Video, assetDir string, outputFilePath string) error {
+func build(video *Video, assetDir string, outputFilePath string) ([]OutputClip, error) {
+	returnClips := []OutputClip{}
 
 	// Add views to input stream
 	var streamInputs []*ffmpeg.Stream
+	currentTimeSec := 0
 	for _, clip := range video.Clips {
-		sourcePath := filepath.Join(assetDir, clip.View, "%03d.png")
-		loopIntValue, err := strconv.ParseInt(clip.Time, 10, 64)
+		var outputClip OutputClip
+
+		// Create source paths
+		sourceDir := filepath.Join(assetDir, clip.View)
+		sourcePath := filepath.Join(sourceDir, "%03d.png")
+
+		// Set loop identifer and calulate clip time
+		fileList, err := ioutil.ReadDir(sourceDir) // Clip time depends on how many image files there are
 		if err != nil {
-			return err
+			return nil, err
 		}
+		fileCount := float64(len(fileList))
+		outputClip.StartTimeSec = currentTimeSec
 		loop := "0"
-		if loopIntValue > 0 {
+		if clip.Time > 0 { // We want to handle static frame segments differently
 			loop = "1"
+			currentTimeSec += int(clip.Time)
+		} else {
+			speedFloat := float64(clip.Speed)
+			currentTimeSec += int((fileCount * .04) * speedFloat)
 		}
 
 		// Process speed settings
@@ -81,10 +110,14 @@ func build(video *Video, assetDir string, outputFilePath string) error {
 			streamInput = streamInput.Filter("drawtext", titleArgs)
 		}
 		streamInputs = append(streamInputs, streamInput)
+
+		// Store return clip
+		outputClip.Name = clip.Name
+		returnClips = append(returnClips, outputClip)
 	}
 
 	// Scale and build video
 	finalStream := ffmpeg.Concat(streamInputs)
 	finalStream = finalStream.Filter("scale", ffmpeg.Args{video.Scale})
-	return finalStream.Output(outputFilePath).OverWriteOutput().Run()
+	return returnClips, finalStream.Output(outputFilePath).OverWriteOutput().Run()
 }

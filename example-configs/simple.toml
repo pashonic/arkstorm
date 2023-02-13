@@ -35,8 +35,9 @@ scale = "-1:1080"
 
 [[videos.watempwind.clips]]
 view = "seatacensqpf"
-speed = "1"
-time = "10"
+name = "Seatac 24 Precp Ensemble"
+speed = 1
+time = 10
 
 [[videos.watempwind.clips.texts]]
 text = "Seatac Ensemble 24 Hour Precep"
@@ -46,22 +47,24 @@ size = 22
 
 [[videos.watempwind.clips]]
 view = "wa2mtemp"
-speed = "5"
-time = "0"
+name = "2 Meter Temperature"
+speed = 5
+time = 0
 
 [[videos.watempwind.clips.texts]]
-text = "WA Wind\nGust"
+text = "WA 2m Temp"
 cords = { x = 715, y = 765 }
 color = "red"
 size = 20
 
 [[videos.watempwind.clips]]
 view = "wagusts"
-speed = "5"
-time = "0"
+name = "Wind Gusts"
+speed = 5
+time = 0
 
 [[videos.watempwind.clips.texts]]
-text = "WA 2m Temp"
+text = "WA Wind\nGust"
 cords = { x = 710, y = 775 }
 color = "red"
 size = 20
@@ -72,3 +75,4 @@ size = 20
 # privacy = "unlisted"
 # tags = ["washington", "weather"]
 # categoryid = "28"
+# snsalertarn = "arn:aws:sns:us-west-2:602525097839:arkstorm-dev-failure-20230211080048284400000002"

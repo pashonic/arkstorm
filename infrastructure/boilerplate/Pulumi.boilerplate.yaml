@@ -1,0 +1,2 @@
+secretsprovider: awskms://12e32f8a-e56c-40a2-bab6-fc3be70d6e3b?region=us-west-2
+encryptedkey: AQICAHiRetEXxMKQpIutzbZwXEm4+z0MXE4KiDA+fq+rWtE0UwE3Gh1LEPdaalfjhTQQI6XSAAAAfjB8BgkqhkiG9w0BBwagbzBtAgEAMGgGCSqGSIb3DQEHATAeBglghkgBZQMEAS4wEQQMjXXMSz3007D4IshVAgEQgDvDa3xwZx2guCZNVXaizkw01pQIzHatYoNIAIr46svJ5ApWhdVC9Q4NYoxb+aw68oplMQZyR3i42+Jrfw==

@@ -6,7 +6,6 @@ import (
 
 	"github.com/BurntSushi/toml"
 	"github.com/pashonic/arkstorm/src/providers/weatherbell"
-	"github.com/pashonic/arkstorm/src/utils/sendsns"
 	"github.com/pashonic/arkstorm/src/videobuilder"
 	"github.com/pashonic/arkstorm/src/videouploader"
 )
@@ -22,7 +21,7 @@ type config struct {
 		Weatherbell weatherbell.Weatherbell
 	}
 	Videos  map[string]videobuilder.Video
-	Youtube videouploader.Videos
+	Youtube videouploader.YoutubeVideos
 }
 
 func main() {
@@ -49,25 +48,16 @@ func main() {
 	}
 
 	// Make videos from asset views
-	videoContent, err := videobuilder.BuildVideos(conf.Videos, default_assets_dir, default_output_videos_dir)
+	outputVideos, err := videobuilder.BuildVideos(conf.Videos, default_assets_dir, default_output_videos_dir)
 	if err != nil {
 		log.Fatalln(err)
 		return
 	}
 
 	// Upload videos
-	videoList, err := videouploader.UploadVideos(&conf.Youtube, videoContent)
+	err = videouploader.UploadVideos(&conf.Youtube, outputVideos)
 	if err != nil {
 		log.Fatalln(err)
 		return
-	}
-
-	// Send out alerts
-	for _, vidId := range videoList {
-		youtubeLink := "https://youtu.be/" + vidId
-		if err := sendsns.SendSNS("Washington Weather Video Uploaded", youtubeLink); err != nil {
-			log.Fatalln(err)
-			return
-		}
 	}
 }
