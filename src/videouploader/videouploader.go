@@ -88,7 +88,7 @@ func upload(video videobuilder.OutputVideo, youtubeVideo YoutubeVideo) error {
 		return err
 	}
 
-	description := ""
+	description := youtubeVideo.Description + "\n\n"
 	for _, clip := range video.Clips {
 		timeString := fmt.Sprintf(secondsToMinutes(clip.StartTimeSec))
 		description += fmt.Sprintf("%v %v\n", timeString, clip.Name)

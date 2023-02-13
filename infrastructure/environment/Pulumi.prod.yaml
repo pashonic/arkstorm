@@ -6,7 +6,7 @@ config:
     - name: washington
       schedule: 30 8,20 * * ? *
     - name: california
-      schedule: 30 9,21 * * ? *
+      schedule: 30 8,20 * * ? *
   arkstorm:weatherbell-password:
     secure: v1:hsZQV0+ZyDviEBm1:SL4U+Rxz9uRAM3LgWNuKAJp1IVTbMLgKUpc=
   arkstorm:weatherbell-username:

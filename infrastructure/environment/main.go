@@ -382,12 +382,35 @@ def lambda_handler(event, context):
 				configBucket := args[5].(string)
 				jobQueueArn := args[6].(string)
 
+				//
 				// Get jobs configuration
+				//
+
 				jobs := []Job{}
 				config.RequireObject("jobs", &jobs)
 
+				//
 				// Process jobs
+				//
+
 				for _, job := range jobs {
+
+					//
+					// Create SNS topic for emails
+					//
+
+					alert, err := sns.NewTopic(ctx, "alert"+job.Name, &sns.TopicArgs{
+						NamePrefix: pulumi.String(fmt.Sprintf("%s-%s-%s-", ctx.Project(), ctx.Stack(), job.Name)),
+					})
+					if err != nil {
+						ctx.Log.Error(err.Error(), nil)
+					}
+					ctx.Export("Alert Job SNS ARN for "+job.Name, alert.Arn)
+
+					//
+					// Define job confguration settings
+					//
+
 					jobDefContainerProperties, err := json.Marshal(map[string]interface{}{
 						"image":            fmt.Sprintf("%s:latest", dockerRepoUrl),
 						"jobRoleArn":       jobRoleArn,
