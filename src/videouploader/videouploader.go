@@ -123,7 +123,7 @@ func upload(video videobuilder.OutputVideo, youtubeVideo YoutubeVideo) error {
 	// Send SNS alert
 	youtubeLink := "https://youtu.be/" + response.Id
 	if youtubeVideo.SnsAlertArn != "" {
-		if err := sendsns.SendSNS("Washington Weather Video Uploaded", youtubeLink, youtubeVideo.SnsAlertArn); err != nil {
+		if err := sendsns.SendSNS(youtubeVideo.Title+" Uploaded", youtubeLink, youtubeVideo.SnsAlertArn); err != nil {
 			return err
 		}
 	}
