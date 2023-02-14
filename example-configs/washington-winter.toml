@@ -117,8 +117,8 @@ color = "red"
 size = 20
 
 [youtube.videos.watempwind]
-title = "Washington Winter 72 Hour Out"
-description = "ECMWF 72 hours out"
+title = "ECMWF Washington 3 Day Forecast"
+description = "ECMWF Washington 72 hours out"
 privacy = "unlisted"
 tags = ["washington", "weather"]
 categoryid = "28"
