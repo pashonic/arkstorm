@@ -181,7 +181,7 @@ func main() {
 				computeEnv, err := batch.NewComputeEnvironment(ctx, "compute", &batch.ComputeEnvironmentArgs{
 					ComputeEnvironmentName: pulumi.String(fmt.Sprintf("%s-%s", ctx.Project(), ctx.Stack())),
 					ComputeResources: &batch.ComputeEnvironmentComputeResourcesArgs{
-						MaxVcpus: pulumi.Int(1),
+						MaxVcpus: pulumi.Int(config.RequireInt("compenvcpus")),
 						SecurityGroupIds: pulumi.StringArray{
 							pulumi.String(securityGroupId),
 						},
