@@ -1,6 +1,6 @@
 [providers]
 
-[providers.weatherbell.views.wa2mtemp]
+[providers.weatherbell.views.2mtemp]
 timespanhours=72
 viewtype="model"
 product="ecmwf-deterministic"
@@ -10,7 +10,7 @@ time_label_cords = { x = 405, y = 27 }
 time_label_timezone="America/Los_Angeles"
 cyclehours=[0,12]
 
-[providers.weatherbell.views.wagusts]
+[providers.weatherbell.views.gusts]
 timespanhours=72
 viewtype="model"
 product="ecmwf-deterministic"
@@ -40,7 +40,7 @@ time_label_cords = { x = 467, y = 27 }
 time_label_timezone="America/Los_Angeles"
 cyclehours=[0,12]
 
-[providers.weatherbell.views.2mrhumidity]
+[providers.weatherbell.views.2mhumidity]
 timespanhours=72
 viewtype="model"
 product="ecmwf-deterministic"
@@ -52,71 +52,71 @@ cyclehours=[0,12]
 
 [videos]
 
-[videos.watempwind]
-filename = "Washington-Winter-Standard-72-Hour"
+[videos.winter]
+filename = "Washington-Winter-72-Hour"
 scale = "-1:1080"
 
-[[videos.watempwind.clips]]
-view = "wa2mtemp"
+[[videos.winter.clips]]
+view = "2mtemp"
 name = "2 Meter Temperature"
 speed = 5
 time = 0
 
-[[videos.watempwind.clips.texts]]
+[[videos.winter.clips.texts]]
 text = "2m Temp"
 cords = { x = 715, y = 776 }
 color = "red"
 size = 20
 
-[[videos.watempwind.clips]]
-view = "wagusts"
+[[videos.winter.clips]]
+view = "gusts"
 name = "Wind Gusts"
 speed = 5
 time = 0
 
-[[videos.watempwind.clips.texts]]
+[[videos.winter.clips.texts]]
 text = "Wind Gusts"
 cords = { x = 715, y = 776 }
 color = "red"
 size = 20
 
-[[videos.watempwind.clips]]
+[[videos.winter.clips]]
 view = "12hrrain"
 name = "12 Hour Rain"
 speed = 5
 time = 0
 
-[[videos.watempwind.clips.texts]]
+[[videos.winter.clips.texts]]
 text = "12 Hour Rain"
 cords = { x = 715, y = 776 }
 color = "red"
 size = 20
 
-[[videos.watempwind.clips]]
+[[videos.winter.clips]]
 view = "12hrsnow"
 name = "12 Hour Snow"
 speed = 5
 time = 0
 
-[[videos.watempwind.clips.texts]]
+[[videos.winter.clips.texts]]
 text = "12 Hour Snow"
 cords = { x = 715, y = 776 }
 color = "red"
 size = 20
 
-[[videos.watempwind.clips]]
-view = "2mrhumidity"
-name = "2m Relative Humidity "
+[[videos.winter.clips]]
+view = "2mhumidity"
+name = "2 Meter Relative Humidity "
 speed = 5
 time = 0
 
-[[videos.watempwind.clips.texts]]
+[[videos.winter.clips.texts]]
 text = "2m Rel.\nHumidity"
 cords = { x = 715, y = 765 }
 color = "red"
 size = 20
 
-[youtube.videos.watempwind]
+[youtube.videos.winter]
 title = "ECMWF Washington 3 Day Forecast"
 description = "ECMWF Washington 72 hours out"
 privacy = "unlisted"
