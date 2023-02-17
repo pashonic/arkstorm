@@ -1,0 +1,37 @@
+[providers]
+
+[providers.weatherbell.views.irsim]
+timespanhours=240
+viewtype="model"
+product="ecmwf-deterministic"
+region="namer"
+parameter="toa_brightness"
+time_label_cords = { x = 480, y = 27 }
+time_label_timezone="America/Los_Angeles"
+cyclehours=[0,12]
+
+[videos]
+
+[videos.winter]
+filename = "North-America-240-Hour"
+scale = "-1:1080"
+
+[[videos.winter.clips]]
+view = "irsim"
+name = "Simulated IR Satellite"
+speed = 6
+time = 0
+
+[[videos.winter.clips.texts]]
+text = "Sim. IR Sat."
+cords = { x = 715, y = 776 }
+color = "red"
+size = 20
+
+[youtube.videos.winter]
+title = "ECMWF North-Americara 10 Day Forecast"
+description = "ECMWF North-Americara 10 Day Forecast"
+privacy = "unlisted"
+tags = ["North-America", "weather"]
+categoryid = "28"
+snsalertarn = "arn:aws:sns:us-west-2:602525097839:arkstorm-prod-northamerica-20230217024752289600000002"

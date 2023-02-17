@@ -8,6 +8,8 @@ config:
       schedule: 0 8,20 * * ? *
     - name: oregon
       schedule: 0 8,20 * * ? *
+    - name: northamerica
+      schedule: 0 8,20 * * ? *
   arkstorm:weatherbell-password:
     secure: v1:hsZQV0+ZyDviEBm1:SL4U+Rxz9uRAM3LgWNuKAJp1IVTbMLgKUpc=
   arkstorm:weatherbell-username:
