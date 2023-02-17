@@ -40,13 +40,13 @@ time_label_cords = { x = 467, y = 27 }
 time_label_timezone="America/Los_Angeles"
 cyclehours=[0,12]
 
-[providers.weatherbell.views.2mhumidity]
+[providers.weatherbell.views.cloud]
 timespanhours=72
 viewtype="model"
 product="ecmwf-deterministic"
 region="oregon"
-parameter="rh2m"
-time_label_cords = { x = 407, y = 27 }
+parameter="total_cloud"
+time_label_cords = { x = 440, y = 27 }
 time_label_timezone="America/Los_Angeles"
 cyclehours=[0,12]
 
@@ -105,14 +105,14 @@ color = "red"
 size = 20
 
 [[videos.winter.clips]]
-view = "2mhumidity"
-name = "2 Meter Relative Humidity "
+view = "cloud"
+name = "Cloud Cover"
 speed = 5
 time = 0
 
 [[videos.winter.clips.texts]]
-text = "2m Rel.\nHumidity"
-cords = { x = 715, y = 765 }
+text = "Cloud Cover"
+cords = { x = 715, y = 776 }
 color = "red"
 size = 20
 
