@@ -8,7 +8,17 @@ region="namer"
 parameter="toa_brightness"
 time_label_cords = { x = 480, y = 27 }
 time_label_timezone="America/Los_Angeles"
-cyclehours=[0,12]
+cyclehours=[0, 12]
+
+[providers.weatherbell.views.t850]
+timespanhours=240
+viewtype="model"
+product="ecmwf-deterministic"
+region="namer"
+parameter="t850"
+time_label_cords = { x = 440, y = 27 }
+time_label_timezone="America/Los_Angeles"
+cyclehours=[0, 12]
 
 [videos]
 
@@ -19,11 +29,23 @@ scale = "-1:1080"
 [[videos.winter.clips]]
 view = "irsim"
 name = "Simulated IR Satellite"
-speed = 6
+speed = 10
 time = 0
 
 [[videos.winter.clips.texts]]
 text = "Sim. IR Sat."
+cords = { x = 715, y = 776 }
+color = "red"
+size = 20
+
+[[videos.winter.clips]]
+view = "t850"
+name = "850mb Temp"
+speed = 10
+time = 0
+
+[[videos.winter.clips.texts]]
+text = "850mb Temp"
 cords = { x = 715, y = 776 }
 color = "red"
 size = 20
