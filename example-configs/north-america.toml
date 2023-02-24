@@ -1,6 +1,6 @@
 [providers]
 
-[providers.weatherbell.views.irsim]
+[providers.weatherbell.views.irsim-na]
 timespanhours=240
 viewtype="model"
 product="ecmwf-deterministic"
@@ -10,7 +10,7 @@ time_label_cords = { x = 480, y = 27 }
 time_label_timezone="America/Los_Angeles"
 cyclehours=[0, 12]
 
-[providers.weatherbell.views.t850]
+[providers.weatherbell.views.850mbtemp-na]
 timespanhours=240
 viewtype="model"
 product="ecmwf-deterministic"
@@ -20,39 +20,181 @@ time_label_cords = { x = 440, y = 27 }
 time_label_timezone="America/Los_Angeles"
 cyclehours=[0, 12]
 
+[providers.weatherbell.views.850mbtempanomaly-na]
+timespanhours=240
+viewtype="model"
+product="ecmwf-deterministic"
+region="namer"
+parameter="t850_anom_1day"
+time_label_cords = { x = 440, y = 27 }
+time_label_timezone="America/Los_Angeles"
+cyclehours=[0, 12]
+
+[providers.weatherbell.views.totalprecip-na]
+timespanhours=240
+viewtype="model"
+product="ecmwf-deterministic"
+region="namer"
+parameter="total_precip_inch"
+time_label_cords = { x = 440, y = 27 }
+time_label_timezone="America/Los_Angeles"
+cyclehours=[0, 12]
+
+[providers.weatherbell.views.mslp-na]
+timespanhours=240
+viewtype="model"
+product="ecmwf-deterministic"
+region="namer"
+parameter="mslp"
+time_label_cords = { x = 440, y = 27 }
+time_label_timezone="America/Los_Angeles"
+cyclehours=[0, 12]
+
+[providers.weatherbell.views.dailyminmax-seatac]
+viewtype="meteogram"
+product="ecmwf-ensemble"
+region="KSEA"
+parameter="daily_tmin_tmax"
+cyclehours=[0,12]
+
+[providers.weatherbell.views.multirun-temp-change-seatac]
+viewtype="meteogram"
+product="ecmwf-ensemble"
+region="KSEA"
+parameter="t2m_multirun"
+cyclehours=[0,12]
+
+[providers.weatherbell.views.qpf-seatac]
+viewtype="meteogram"
+product="ecmwf-ensemble"
+region="KSEA"
+parameter="indiv_qpf_24"
+cyclehours=[0,12]
+
+[providers.weatherbell.views.snow-seatac]
+viewtype="meteogram"
+product="ecmwf-ensemble"
+region="KSEA"
+parameter="indiv_snow_24"
+cyclehours=[0,12]
+
+[providers.weatherbell.views.snow-paine]
+viewtype="meteogram"
+product="ecmwf-ensemble"
+region="KPAE"
+parameter="indiv_snow_24"
+cyclehours=[0,12]
+
 [videos]
 
 [videos.winter]
 filename = "North-America-240-Hour"
-scale = "-1:1080"
+scale = "-1:1440"
+dimensions = { w = 1920, h = 1080 }
+
+#
+# 850mb Temp North America
+#
 
 [[videos.winter.clips]]
-view = "irsim"
-name = "Simulated IR Satellite"
+view = "850mbtemp-na"
+name = "North America - 850mb Temp"
 speed = 10
 time = 0
 
-[[videos.winter.clips.texts]]
-text = "Sim. IR Sat."
-cords = { x = 715, y = 776 }
-color = "red"
-size = 20
+#
+# 850mb Anomaly 1day Average Temprature North America
+#
 
 [[videos.winter.clips]]
-view = "t850"
-name = "850mb Temp"
+view = "850mbtempanomaly-na"
+name = "North America - Anomaly 1day Average Temp"
 speed = 10
 time = 0
 
-[[videos.winter.clips.texts]]
-text = "850mb Temp"
-cords = { x = 715, y = 776 }
-color = "red"
-size = 20
+#
+# Simulated IR Satellite North America
+#
+
+[[videos.winter.clips]]
+view = "irsim-na"
+name = "North America - Simulated IR Satellite"
+speed = 10
+time = 0
+
+#
+# Total Precipitation North America
+#
+
+[[videos.winter.clips]]
+view = "totalprecip-na"
+name = "North America - Total Precipitation"
+speed = 10
+time = 0
+
+#
+# MSLP North America
+#
+
+[[videos.winter.clips]]
+view = "mslp-na"
+name = "North America - MSLP"
+speed = 10
+time = 0
+
+#
+# Daily Min Max Seatac
+#
+
+[[videos.winter.clips]]
+view = "dailyminmax-seatac"
+name = "Seatac - Daily Min Max"
+speed = 1
+time = 10
+
+#
+# Multi-run Temp Change Trend Seatac
+#
+
+[[videos.winter.clips]]
+view = "multirun-temp-change-seatac"
+name = "Seatac - Multi-run Temp Change Trend"
+speed = 1
+time = 10
+
+#
+# QPF Ensemble Members Seatac
+#
+
+[[videos.winter.clips]]
+view = "qpf-seatac"
+name = "Seatac - QPF Ensemble Members"
+speed = 1
+time = 10
+
+#
+# Snow Ensemble Members Seatac
+#
+
+[[videos.winter.clips]]
+view = "snow-seatac"
+name = "Seatac - Snow Ensembles"
+speed = 1
+time = 10
+
+#
+# Snow Ensemble Members Paine Field
+#
+
+[[videos.winter.clips]]
+view = "snow-paine"
+name = "Paine Field(Everett) - Snow Ensembles"
+speed = 1
+time = 10
 
 [youtube.videos.winter]
-title = "ECMWF North-Americara 10 Day Forecast"
-description = "ECMWF North-Americara 10 Day Forecast"
+title = "ECMWF North America Washington Nerd Content"
+description = "ECMWF North America Washington Nerd Content"
 privacy = "unlisted"
 tags = ["North-America", "weather"]
 categoryid = "28"

@@ -9,6 +9,11 @@ import (
 	ffmpeg "github.com/u2takey/ffmpeg-go"
 )
 
+const (
+	default_dimension_width  = 1920
+	default_dimension_height = 1080
+)
+
 type text struct {
 	Text  string
 	Cords struct {
@@ -32,6 +37,10 @@ type Video struct {
 	OutputFilePath string
 	Scale          string
 	Clips          []clip
+	Dimensions     struct {
+		W int
+		H int
+	}
 }
 
 type OutputClip struct {
@@ -69,6 +78,14 @@ func BuildVideos(videos map[string]Video, assetDir string, outputDir string) (ma
 func build(video *Video, assetDir string, outputFilePath string) ([]OutputClip, error) {
 	returnClips := []OutputClip{}
 
+	// Determine dimension
+	dimW := default_dimension_width
+	dimH := default_dimension_height
+	if video.Dimensions.W > 0 && video.Dimensions.H > 0 {
+		dimW = video.Dimensions.W
+		dimH = video.Dimensions.H
+	}
+
 	// Add views to input stream
 	var streamInputs []*ffmpeg.Stream
 	currentTimeSec := 0
@@ -98,7 +115,7 @@ func build(video *Video, assetDir string, outputFilePath string) ([]OutputClip, 
 		// Process speed settings
 		streamInput := ffmpeg.Input(sourcePath, ffmpeg.KwArgs{"loop": loop, "t": clip.Time}).Filter("setpts", ffmpeg.Args{fmt.Sprintf("%v*PTS", clip.Speed)})
 
-		// Apply title if specified
+		// Apply titles, if specified
 		for _, text := range clip.Texts {
 			titleArgs := ffmpeg.Args{
 				fmt.Sprintf("text='%v'", text.Text),
@@ -109,6 +126,18 @@ func build(video *Video, assetDir string, outputFilePath string) ([]OutputClip, 
 			}
 			streamInput = streamInput.Filter("drawtext", titleArgs)
 		}
+
+		// Force all input frames to be same size
+		scaleArgs := ffmpeg.Args{
+			fmt.Sprintf("iw*min(%[1]v/iw\\,%[2]v/ih):ih*min(%[1]v/iw\\,%[2]v/ih)", dimW, dimH),
+		}
+		streamInput = streamInput.Filter("scale", scaleArgs)
+		padArgs := ffmpeg.Args{
+			fmt.Sprintf("%[1]v:%[2]v:(%[1]v-iw)/2:(%[2]v-ih)/2", dimW, dimH),
+		}
+		streamInput = streamInput.Filter("pad", padArgs)
+
+		// Add clip to pool
 		streamInputs = append(streamInputs, streamInput)
 
 		// Store return clip

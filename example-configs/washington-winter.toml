@@ -54,7 +54,8 @@ cyclehours=[0,12]
 
 [videos.winter]
 filename = "Washington-Winter-72-Hour"
-scale = "-1:1080"
+scale = "-1:1440"
+dimensions = { w = 1920, h = 1080 }
 
 [[videos.winter.clips]]
 view = "2mtemp"

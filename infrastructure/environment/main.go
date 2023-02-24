@@ -464,17 +464,17 @@ def lambda_handler(event, context):
 					if err != nil {
 						ctx.Log.Error(err.Error(), nil)
 					}
-					ctx.Export(fmt.Sprintf("%s job definition", job.Name), jobDefinition.Name)
+					ctx.Export(fmt.Sprintf("%s job definition", job), jobDefinition.Name)
 
 					//
 					// Create scheduled event, layer 3 process
 					//
 
-					pulumi.All(jobDefinition.Arn, jobQueueArn, job.Name).ApplyT(
+					pulumi.All(jobDefinition.Arn, jobQueueArn, job).ApplyT(
 						func(args []interface{}) *pulumi.Output {
 							jobDefinitionArn := args[0].(string)
 							jobQueueArn := args[1].(string)
-							jobName := args[2].(string)
+							job := args[2].(Job)
 
 							//
 							// Create event role
@@ -512,12 +512,12 @@ def lambda_handler(event, context):
 							if err != nil {
 								ctx.Log.Error(err.Error(), nil)
 							}
-							eventRole, err := iam.NewRole(ctx, "event-"+jobName, &iam.RoleArgs{
+							eventRole, err := iam.NewRole(ctx, "event-"+job.Name, &iam.RoleArgs{
 								AssumeRolePolicy: pulumi.String(eventAssumeRole),
 								NamePrefix:       pulumi.String(fmt.Sprintf("%s-%s-event-", ctx.Project(), ctx.Stack())),
 								InlinePolicies: iam.RoleInlinePolicyArray{
 									&iam.RoleInlinePolicyArgs{
-										Name:   pulumi.String("event-policy-" + jobName),
+										Name:   pulumi.String("event-policy-" + job.Name),
 										Policy: pulumi.String(eventPolicyData.Json),
 									},
 								},
@@ -526,20 +526,20 @@ def lambda_handler(event, context):
 								ctx.Log.Error(err.Error(), nil)
 							}
 
-							eventRule, err := cloudwatch.NewEventRule(ctx, "eventrule-"+jobName, &cloudwatch.EventRuleArgs{
+							eventRule, err := cloudwatch.NewEventRule(ctx, "eventrule-"+job.Name, &cloudwatch.EventRuleArgs{
 								ScheduleExpression: pulumi.String(fmt.Sprintf("cron(%s)", job.Schedule)),
 								IsEnabled:          pulumi.Bool(false),
-								NamePrefix:         pulumi.String(fmt.Sprintf("%s-%s-%s-", ctx.Project(), ctx.Stack(), jobName)),
+								NamePrefix:         pulumi.String(fmt.Sprintf("%s-%s-%s-", ctx.Project(), ctx.Stack(), job.Name)),
 							})
 							if err != nil {
 								ctx.Log.Error(err.Error(), nil)
 							}
-							ctx.Export(fmt.Sprintf("%s event rule", jobName), eventRule.Name)
-							_, err = cloudwatch.NewEventTarget(ctx, "eventtarget-"+jobName, &cloudwatch.EventTargetArgs{
+							ctx.Export(fmt.Sprintf("%s event rule", job.Name), eventRule.Name)
+							_, err = cloudwatch.NewEventTarget(ctx, "eventtarget-"+job.Name, &cloudwatch.EventTargetArgs{
 								Rule: eventRule.Name,
 								BatchTarget: &cloudwatch.EventTargetBatchTargetArgs{
 									JobDefinition: pulumi.String(jobDefinitionArn),
-									JobName:       pulumi.String(fmt.Sprintf("%s-%s-%s-event", ctx.Project(), ctx.Stack(), jobName)),
+									JobName:       pulumi.String(fmt.Sprintf("%s-%s-%s-event", ctx.Project(), ctx.Stack(), job.Name)),
 								},
 								RoleArn: eventRole.Arn,
 								Arn:     pulumi.String(jobQueueArn),
@@ -548,8 +548,8 @@ def lambda_handler(event, context):
 								ctx.Log.Error(err.Error(), nil)
 							}
 
-							_, err = s3.NewBucketObject(ctx, "activefile-"+jobName, &s3.BucketObjectArgs{
-								Key:     pulumi.String(fmt.Sprintf("%s/active.toml", jobName)),
+							_, err = s3.NewBucketObject(ctx, "activefile-"+job.Name, &s3.BucketObjectArgs{
+								Key:     pulumi.String(fmt.Sprintf("%s/active.toml", job.Name)),
 								Bucket:  pulumi.String(configBucket),
 								Content: pulumi.String("Replace Me"),
 							})
@@ -557,8 +557,8 @@ def lambda_handler(event, context):
 								ctx.Log.Error(err.Error(), nil)
 							}
 
-							_, err = s3.NewBucketObject(ctx, "secretfile-"+jobName, &s3.BucketObjectArgs{
-								Key:     pulumi.String(fmt.Sprintf("%s/client_secret.json", jobName)),
+							_, err = s3.NewBucketObject(ctx, "secretfile-"+job.Name, &s3.BucketObjectArgs{
+								Key:     pulumi.String(fmt.Sprintf("%s/client_secret.json", job.Name)),
 								Bucket:  pulumi.String(credsBucket),
 								Content: pulumi.String("Replace Me"),
 							})
@@ -566,8 +566,8 @@ def lambda_handler(event, context):
 								ctx.Log.Error(err.Error(), nil)
 							}
 
-							_, err = s3.NewBucketObject(ctx, "tokenfile-"+jobName, &s3.BucketObjectArgs{
-								Key:     pulumi.String(fmt.Sprintf("%s/client_token.json", jobName)),
+							_, err = s3.NewBucketObject(ctx, "tokenfile-"+job.Name, &s3.BucketObjectArgs{
+								Key:     pulumi.String(fmt.Sprintf("%s/client_token.json", job.Name)),
 								Bucket:  pulumi.String(credsBucket),
 								Content: pulumi.String("Replace Me"),
 							})
