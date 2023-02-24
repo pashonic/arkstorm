@@ -5,9 +5,9 @@ config:
   arkstorm:compenvcpus: "2"
   arkstorm:jobs:
     - name: washington
-      schedule: 0 8,20 * * ? *
+      schedule: 30 8,20 * * ? *
     - name: oregon
-      schedule: 0 8,20 * * ? *
+      schedule: 30 8,20 * * ? *
     - name: northamerica
       schedule: 30 8,20 * * ? *
   arkstorm:weatherbell-password:
