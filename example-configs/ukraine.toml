@@ -1,0 +1,140 @@
+[providers]
+
+[providers.weatherbell.views.2mtemp]
+timespanhours=240
+viewtype="model"
+product="ecmwf-deterministic"
+region="ukraine"
+parameter="t2m_c"
+time_label_cords = { x = 405, y = 27 }
+time_label_timezone="Europe/Kyiv"
+cyclehours=[0,12]
+
+[providers.weatherbell.views.precip]
+timespanhours=240
+viewtype="model"
+product="ecmwf-deterministic"
+region="ukraine"
+parameter="precip_24hr_mm"
+time_label_cords = { x = 427, y = 27 }
+time_label_timezone="Europe/Kyiv"
+cyclehours=[0,12]
+
+[providers.weatherbell.views.windgust]
+timespanhours=240
+viewtype="model"
+product="ecmwf-deterministic"
+region="ukraine"
+parameter="gust_kmh"
+time_label_cords = { x = 427, y = 27 }
+time_label_timezone="Europe/Kyiv"
+cyclehours=[0,12]
+
+[providers.weatherbell.views.snow]
+timespanhours=240
+viewtype="model"
+product="ecmwf-deterministic"
+region="ukraine"
+parameter="snow_24hr_cm"
+time_label_cords = { x = 427, y = 27 }
+time_label_timezone="Europe/Kyiv"
+cyclehours=[0,12]
+
+[providers.weatherbell.views.cloudcover]
+timespanhours=240
+viewtype="model"
+product="ecmwf-deterministic"
+region="ukraine"
+parameter="total_cloud"
+time_label_cords = { x = 427, y = 27 }
+time_label_timezone="Europe/Kyiv"
+cyclehours=[0,12]
+
+[providers.weatherbell.views.donetsktemp]
+timespanhours=240
+viewtype="meteogram"
+product="ecmwf-deterministic"
+region="UKCC"
+parameter="daily_tmin_tmax"
+cyclehours=[0,12]
+
+[videos]
+
+[videos.weather]
+filename = "Ukraine"
+scale = "-1:1440"
+dimensions = { w = 1920, h = 1080 }
+
+[[videos.weather.clips]]
+view = "2mtemp"
+name = "2 Meter Temperature (c)"
+speed = 5
+time = 0
+
+[[videos.weather.clips.texts]]
+text = "2m Temp (c)"
+cords = { x = 715, y = 776 }
+color = "red"
+size = 20
+
+[[videos.weather.clips]]
+view = "precip"
+name = "24Hr Precip (mm)"
+speed = 5
+time = 0
+
+[[videos.weather.clips.texts]]
+text = "24Hr Precip (mm)"
+cords = { x = 715, y = 776 }
+color = "red"
+size = 20
+
+[[videos.weather.clips]]
+view = "windgust"
+name = "Wind Gusts (km/hr)"
+speed = 5
+time = 0
+
+[[videos.weather.clips.texts]]
+text = "Wind Gusts (km/hr)"
+cords = { x = 715, y = 776 }
+color = "red"
+size = 20
+
+[[videos.weather.clips]]
+view = "snow"
+name = "24Hr Snow (cm)"
+speed = 5
+time = 0
+
+[[videos.weather.clips.texts]]
+text = "24Hr Snow (cm)"
+cords = { x = 715, y = 776 }
+color = "red"
+size = 20
+
+[[videos.weather.clips]]
+view = "cloudcover"
+name = "Cloud Cover Precentage"
+speed = 5
+time = 0
+
+[[videos.weather.clips.texts]]
+text = "Cloud Cover %"
+cords = { x = 715, y = 776 }
+color = "red"
+size = 20
+
+[[videos.weather.clips]]
+view = "donetsktemp"
+name = "Donetsk Int airport - Daily High/Low Temp"
+speed = 1
+time = 10
+
+# [youtube.videos.weather]
+# title = "ECMWF Ukraine 10 Day Forecast"
+# description = "ECMWF Ukraine 10 Day Forecast"
+# privacy = "public"
+# tags = ["ukraine", "weather"]
+# categoryid = "28"
+# snsalertarn = "arn:aws:sns:us-west-2:602525097839:arkstorm-prod-ukraine-2023031623292165270000000d"

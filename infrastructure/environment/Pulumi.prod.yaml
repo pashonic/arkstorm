@@ -2,13 +2,9 @@ secretsprovider: awskms://12e32f8a-e56c-40a2-bab6-fc3be70d6e3b?region=us-west-2
 encryptedkey: AQICAHiRetEXxMKQpIutzbZwXEm4+z0MXE4KiDA+fq+rWtE0UwHh01El5B8W4p7r7MFKXyaPAAAAfjB8BgkqhkiG9w0BBwagbzBtAgEAMGgGCSqGSIb3DQEHATAeBglghkgBZQMEAS4wEQQMa2Yy8pvk+Ldb/XouAgEQgDsvRRIFSudexrR78Rn1Kdg2Da9UOQBcNLIFFvw2kXRwUY0WX7PObZIimo5ia8SnCUoiMUwK9CelYW3/qw==
 config:
   arkstorm:boilerplatestack: boilerplate
-  arkstorm:compenvcpus: "2"
+  arkstorm:compenvcpus: "4"
   arkstorm:jobs:
-    - name: washington
-      schedule: 30 8,20 * * ? *
-    - name: oregon
-      schedule: 30 8,20 * * ? *
-    - name: northamerica
+    - name: ukraine
       schedule: 30 8,20 * * ? *
   arkstorm:weatherbell-password:
     secure: v1:hsZQV0+ZyDviEBm1:SL4U+Rxz9uRAM3LgWNuKAJp1IVTbMLgKUpc=
