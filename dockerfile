@@ -1,4 +1,4 @@
-FROM golang:1.19.4-alpine AS builder
+FROM golang:1.22.2-alpine AS builder
 RUN apk add --update make
 WORKDIR /go/arkstorm
 COPY . ./
